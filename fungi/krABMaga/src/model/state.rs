@@ -92,6 +92,12 @@ impl State for FungiState {
                 |v| { *v },
                 GridOption::READWRITE,
             );
+
+            // Update the cell grid
+            self.cell_grid.apply_to_all_values(
+                |_loc, cell| { Some(*cell) },
+                GridOption::READWRITE,
+            );
         }
 
         self.resource_grid.lazy_update();

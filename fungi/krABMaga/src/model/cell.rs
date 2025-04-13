@@ -5,7 +5,7 @@ use krabmaga::engine::{agent::Agent, location::Int2D, state::State};
 use krabmaga::rand;
 use krabmaga::rand::Rng;
 
-use super::fungi::FungiState;
+use super::state::FungiState;
 use crate::{
     DIRECT_OPPOSITE_CHANCE, BROAD_OPPOSITE_CHANCE,
     MAX_NEIGHBOR_BEFORE_STARVATION, SAFE_NEIGHBOR,
@@ -62,6 +62,11 @@ impl Cell {
 
     pub fn get_type(&self) -> CellType {
         self.cell_type
+    }
+
+    #[allow(dead_code)]
+    pub fn as_agent(self) -> Box<dyn Agent> {
+        Box::new(self)
     }
 
     pub fn get_neighborhood_pos(&self, state: &FungiState) -> Vec<Int2D> {
@@ -259,10 +264,7 @@ impl Cell {
             return;
         }
 
-        // let child_resource = cell.resource_amount * 0.9;
-        // cell.resource_amount -= child_resource;
-
-        let child_resource = self.resource_amount as f32 * 0.9;
+        let child_resource = self.resource_amount * 0.9;
         self.resource_amount -= child_resource;
         let random = rng.gen_range(0.0..total);
 

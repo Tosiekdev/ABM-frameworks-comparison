@@ -1,8 +1,18 @@
 #[cfg(not(any(feature = "visualization", feature = "visualization_wasm")))]
 use krabmaga::*;
 
+#[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
+use {
+    crate::visualization::vis_state::VisState,
+    krabmaga::bevy::prelude::Color,
+    krabmaga::bevy::prelude::FixedUpdate,
+    krabmaga::engine::fields::dense_number_grid_2d::DenseNumberGrid2D,
+    krabmaga::visualization::fields::number_grid_2d::BatchRender,
+    krabmaga::visualization::visualization::Visualization,
+};
+
 // Global imports (needed for the simulation to run)
-use crate::model::fungi::FungiState;
+use crate::model::state::FungiState;
 
 mod model;
 
@@ -23,10 +33,20 @@ fn main() {
     simulate!(state, step, 1, true);
 }
 
+#[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
+mod visualization;
+
 // Main used when a visualization feature is applied.
 #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
 fn main() {
-    panic!(
-        "The visualization feature is not yet implemented. Please use the simulation feature instead."
-    );
+    let dim: (i32, i32) = (100, 100);
+
+    let state = FungiState::new(dim);
+    let mut app = Visualization::default()
+        .with_background_color(Color::rgb(255., 255., 255.))
+        .with_simulation_dimensions(dim.0 as f32, dim.1 as f32)
+        .with_window_dimensions(100., 100.)
+        .setup::<VisState, FungiState>(VisState, state);
+    app.add_systems(FixedUpdate, DenseNumberGrid2D::batch_render);
+    app.run()
 }
