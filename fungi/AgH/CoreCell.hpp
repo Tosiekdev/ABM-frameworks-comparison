@@ -17,7 +17,12 @@ struct CoreCell {
     std::optional<agh::Point> pos;
 
 private:
+    void share();
+    void useResources();
+
     bool alive;
+    int resources;
+    int consumption;
 
     static constexpr float directOppositeChance = 0.3f;
 };
