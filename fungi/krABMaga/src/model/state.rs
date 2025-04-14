@@ -13,6 +13,9 @@ use krabmaga::rand;
 use krabmaga::rand::Rng;
 
 use super::cell::{Cell, CellType};
+use crate::{
+    RESOURCE_CLUSTER_NUM, RESOURCE_MAX_AMOUNT, RESOURCE_MAX_CELLS, RESOURCE_CLUSTER_RADIUS, RESOURCE_MIN_AMOUNT, RESOURCE_MIN_CELLS
+};
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum StepType{
@@ -26,12 +29,6 @@ pub struct FungiState{
     pub next_id: i32,
     pub dim: (i32, i32),
     pub resource_grid: DenseNumberGrid2D<f32>,
-    pub resource_num_clusters: i32,
-    pub resource_cluster_radius: i32,
-    pub resource_min_val: f32,
-    pub resource_max_val: f32,
-    pub resource_min_num_cells: i32,
-    pub resource_max_num_cells: i32,
     pub cell_grid: DenseGrid2D<Cell>,
     pub initial_num_cells: i32,
     pub new_cells: Vec<Cell>,
@@ -45,12 +42,6 @@ impl FungiState {
             next_id: 1,
             dim,
             resource_grid: DenseNumberGrid2D::new(dim.0, dim.1),
-            resource_num_clusters: 10,
-            resource_cluster_radius: 10,
-            resource_min_val: 50.0,
-            resource_max_val: 100.0,
-            resource_min_num_cells: 50,
-            resource_max_num_cells: 100,
             cell_grid: DenseGrid2D::new(dim.0, dim.1),
             initial_num_cells: 1,
             new_cells: Vec::new(),
@@ -142,7 +133,7 @@ impl State for FungiState {
                     schedule.dequeue(Box::new(*cell), cell.id as u32);
 
                     let mut updated_cell = cell.clone();
-                    updated_cell.add_resource(cell.get_resource() + val);
+                    updated_cell.add_resource(updated_cell.get_resource() + val);
                     
                     self.cell_grid.set_object_location(updated_cell, &cell.loc);
                     schedule.schedule_repeating(Box::new(updated_cell), schedule.time + 1.0, 0);
@@ -173,6 +164,8 @@ impl State for FungiState {
                 }
             }
         }
+
+        // println!("Total cells: {}, Core cells {}, Exploratory {}", total_cells, total_core_cells, total_exploration_cells);
 
         plot!(
             String::from("Resources over time"),
@@ -231,14 +224,14 @@ fn generate_resources(state: &mut FungiState) {
 
     // Generate random clusters of resources
     // Each cluster will have a random number of cells with a random value
-    for _ in 0..state.resource_num_clusters {
+    for _ in 0..RESOURCE_CLUSTER_NUM {
         let center_x = rng.gen_range(0..state.dim.0) as i32;
         let center_y = rng.gen_range(0..state.dim.1) as i32;
-        let num_cells = rng.gen_range(state.resource_min_num_cells..=state.resource_max_num_cells);
+        let num_cells = rng.gen_range(RESOURCE_MIN_CELLS..=RESOURCE_MAX_CELLS);
 
         for _ in 0..num_cells {
-            let dx = rng.gen_range(-state.resource_cluster_radius..=state.resource_cluster_radius); // [-state.cluster_radius, state.cluster_radius]
-            let dy = rng.gen_range(-state.resource_cluster_radius..=state.resource_cluster_radius); // [-state.cluster_radius, state.cluster_radius]
+            let dx = rng.gen_range(-RESOURCE_CLUSTER_RADIUS..=RESOURCE_CLUSTER_RADIUS); // [-state.cluster_radius, state.cluster_radius]
+            let dy = rng.gen_range(-RESOURCE_CLUSTER_RADIUS..=RESOURCE_CLUSTER_RADIUS); // [-state.cluster_radius, state.cluster_radius]
 
             let x = center_x + dx;
             let y = center_y + dy;
@@ -255,7 +248,7 @@ fn generate_resources(state: &mut FungiState) {
 
                 // Set the value of the cell to a random value between min_val and max_val
                 state.resource_grid.set_value_location(
-                    rng.gen_range(state.resource_min_val..=state.resource_max_val),
+                    rng.gen_range(RESOURCE_MIN_AMOUNT..=RESOURCE_MAX_AMOUNT),
                     &Int2D { x: xi as i32, y: yi as i32 }
                 );
             }

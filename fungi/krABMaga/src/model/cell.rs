@@ -8,9 +8,7 @@ use krabmaga::rand::Rng;
 
 use super::state::{FungiState, StepType};
 use crate::{
-    DIRECT_OPPOSITE_CHANCE, BROAD_OPPOSITE_CHANCE,
-    MAX_NEIGHBOR_BEFORE_STARVATION, SAFE_NEIGHBOR,
-    HARVEST_AMOUNT, CONSUME_AMOUNT
+    BROAD_OPPOSITE_CHANCE, CONSUME_AMOUNT, DIRECT_OPPOSITE_CHANCE, EXPLORATION_BROAD_OPPOSITE_CHANCE, EXPLORATION_DIRECT_OPPOSITE_CHANCE, EXPLORATION_MAX_NEIGHBOR_BEFORE_STARVATION, EXPLORATION_SAFE_NEIGHBOR, HARVEST_AMOUNT, MAX_NEIGHBOR_BEFORE_STARVATION, SAFE_NEIGHBOR
 };
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -46,7 +44,8 @@ pub struct Cell {
     pub resource_amount: f32,
 
     // Exploration
-    is_land_locked: bool
+    is_land_locked: bool,
+    checked_for_resources: bool,
 }
 
 impl Cell {
@@ -63,6 +62,7 @@ impl Cell {
             cell_type,
             resource_amount,
             is_land_locked: false,
+            checked_for_resources: false,
         }
     }
 
@@ -567,9 +567,9 @@ impl Cell {
         let neighbour_count = neighborhood_pos.len() - empty_cells.len();
         let mut deactivation_prob: f32 = neighbour_count as f32 * 0.1;
 
-        if deactivation_prob > MAX_NEIGHBOR_BEFORE_STARVATION {
+        if deactivation_prob > EXPLORATION_MAX_NEIGHBOR_BEFORE_STARVATION {
             deactivation_prob = 0.95;
-        } else if deactivation_prob <= SAFE_NEIGHBOR {
+        } else if deactivation_prob <= EXPLORATION_SAFE_NEIGHBOR {
             deactivation_prob = 0.01;
         }
 
@@ -588,51 +588,51 @@ impl Cell {
         let mut bottom_left_prob: f32 = 0.0;
 
         if has_top {
-            bottom_prob += DIRECT_OPPOSITE_CHANCE;
-            bottom_left_prob += BROAD_OPPOSITE_CHANCE;
-            bottom_right_prob += BROAD_OPPOSITE_CHANCE;
+            bottom_prob += EXPLORATION_DIRECT_OPPOSITE_CHANCE;
+            bottom_left_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
+            bottom_right_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
         }
 
         if has_bottom {
-            top_prob += DIRECT_OPPOSITE_CHANCE;
-            top_left_prob += BROAD_OPPOSITE_CHANCE;
-            top_right_prob += BROAD_OPPOSITE_CHANCE;
+            top_prob += EXPLORATION_DIRECT_OPPOSITE_CHANCE;
+            top_left_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
+            top_right_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
         }
 
         if has_left {
-            right_prob += DIRECT_OPPOSITE_CHANCE;
-            top_right_prob += BROAD_OPPOSITE_CHANCE;
-            bottom_right_prob += BROAD_OPPOSITE_CHANCE;
+            right_prob += EXPLORATION_DIRECT_OPPOSITE_CHANCE;
+            top_right_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
+            bottom_right_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
         }
 
         if has_right {
-            left_prob += DIRECT_OPPOSITE_CHANCE;
-            top_left_prob += BROAD_OPPOSITE_CHANCE;
-            bottom_left_prob += BROAD_OPPOSITE_CHANCE;
+            left_prob += EXPLORATION_DIRECT_OPPOSITE_CHANCE;
+            top_left_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
+            bottom_left_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
         }
 
         if has_top_right {
-            bottom_left_prob += DIRECT_OPPOSITE_CHANCE;
-            left_prob += BROAD_OPPOSITE_CHANCE;
-            bottom_prob += BROAD_OPPOSITE_CHANCE;
+            bottom_left_prob += EXPLORATION_DIRECT_OPPOSITE_CHANCE;
+            left_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
+            bottom_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
         }
 
         if has_top_left {
-            bottom_right_prob += DIRECT_OPPOSITE_CHANCE;
-            right_prob += BROAD_OPPOSITE_CHANCE;
-            bottom_prob += BROAD_OPPOSITE_CHANCE;
+            bottom_right_prob += EXPLORATION_DIRECT_OPPOSITE_CHANCE;
+            right_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
+            bottom_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
         }
 
         if has_bottom_right {
-            top_left_prob += DIRECT_OPPOSITE_CHANCE;
-            left_prob += BROAD_OPPOSITE_CHANCE;
-            top_prob += BROAD_OPPOSITE_CHANCE;
+            top_left_prob += EXPLORATION_DIRECT_OPPOSITE_CHANCE;
+            left_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
+            top_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
         }
 
         if has_bottom_left {
-            top_right_prob += DIRECT_OPPOSITE_CHANCE;
-            right_prob += BROAD_OPPOSITE_CHANCE;
-            top_prob += BROAD_OPPOSITE_CHANCE;
+            top_right_prob += EXPLORATION_DIRECT_OPPOSITE_CHANCE;
+            right_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
+            top_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
         }
 
         if has_top {
@@ -820,6 +820,10 @@ impl Cell {
     }
 
     fn harvest_resource(&mut self, state: &mut FungiState) {
+        if self.checked_for_resources {
+            return;
+        }
+
         if let Some(resource) = state.get_resource(&self.loc) {
             if resource > 0.0 {
                 if resource < HARVEST_AMOUNT {
@@ -831,6 +835,8 @@ impl Cell {
                 }
             }
         }
+
+        self.checked_for_resources = true;
     }
 
     pub fn get_resource(&self) -> f32 {
@@ -842,6 +848,10 @@ impl Cell {
     }
 
     fn consume_resource(&mut self) {
+        if self.state == LifeState::Dead {
+            return;
+        }
+
         if self.resource_amount > CONSUME_AMOUNT {
             self.resource_amount -= CONSUME_AMOUNT;
         } else {
@@ -947,14 +957,9 @@ impl Cell {
 
     pub fn feed_step(&mut self, state: &mut FungiState) {
         let neighbors = self.get_neighbors(state);
-        self.revive(&neighbors);
-        
-        if self.state == LifeState::Dead {
-            return;
-        }
-        
         self.harvest_resource(state);
         self.consume_resource();
+        self.revive(&neighbors);
         self.share_resource(state, &neighbors);
     }
 }
