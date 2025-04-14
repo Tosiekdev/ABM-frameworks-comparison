@@ -21,6 +21,9 @@ pub const BROAD_OPPOSITE_CHANCE: f32 = 0.1;
 pub const MAX_NEIGHBOR_BEFORE_STARVATION: f32 = 0.3;
 pub const SAFE_NEIGHBOR: f32 = 0.0;
 
+pub const HARVEST_AMOUNT: f32 = 1.;
+pub const CONSUME_AMOUNT: f32 = 0.1;
+
 // Main used when only the simulation should run, without any visualization.
 #[cfg(not(any(feature = "visualization", feature = "visualization_wasm")))]
 fn main() {
@@ -30,7 +33,7 @@ fn main() {
 
     let state = FungiState::new(dim);
 
-    simulate!(state, step, 1, true);
+    simulate!(state, step, 10, true);
 }
 
 #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]

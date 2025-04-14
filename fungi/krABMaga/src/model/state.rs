@@ -14,20 +14,28 @@ use krabmaga::rand::Rng;
 
 use super::cell::{Cell, CellType};
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum StepType{
+    Grow,
+    Feed,
+    Explore
+}
+
 pub struct FungiState{
     pub step: u64,
     pub next_id: i32,
     pub dim: (i32, i32),
-    pub resource_grid: DenseNumberGrid2D<i32>,
+    pub resource_grid: DenseNumberGrid2D<f32>,
     pub resource_num_clusters: i32,
     pub resource_cluster_radius: i32,
-    pub resource_min_val: i32,
-    pub resource_max_val: i32,
+    pub resource_min_val: f32,
+    pub resource_max_val: f32,
     pub resource_min_num_cells: i32,
     pub resource_max_num_cells: i32,
     pub cell_grid: DenseGrid2D<Cell>,
     pub initial_num_cells: i32,
     pub new_cells: Vec<Cell>,
+    pub update_cells_resource: HashMap<Int2D, f32>,
 }
 
 impl FungiState {
@@ -38,14 +46,15 @@ impl FungiState {
             dim,
             resource_grid: DenseNumberGrid2D::new(dim.0, dim.1),
             resource_num_clusters: 10,
-            resource_cluster_radius: 5,
-            resource_min_val: 50,
-            resource_max_val: 100,
-            resource_min_num_cells: 5,
-            resource_max_num_cells: 15,
+            resource_cluster_radius: 10,
+            resource_min_val: 50.0,
+            resource_max_val: 100.0,
+            resource_min_num_cells: 50,
+            resource_max_num_cells: 100,
             cell_grid: DenseGrid2D::new(dim.0, dim.1),
             initial_num_cells: 1,
             new_cells: Vec::new(),
+            update_cells_resource: HashMap::new(),
         }
     }
 
@@ -55,12 +64,27 @@ impl FungiState {
         id
     }
 
-    // pub fn get_cell(&self, loc: &Int2D) -> Option<Vec<Cell>> {
-    //     if loc.x < 0 || loc.x >= self.dim.0 || loc.y < 0 || loc.y >= self.dim.1 {
-    //         return None;
-    //     }
-    //     self.cell_grid.get_objects(&loc)
-    // }
+    pub fn get_cell(&self, loc: &Int2D) -> Option<Vec<Cell>> {
+        if loc.x < 0 || loc.x >= self.dim.0 || loc.y < 0 || loc.y >= self.dim.1 {
+            return None;
+        }
+        self.cell_grid.get_objects(&loc)
+    }
+
+    pub fn get_resource(&self, loc: &Int2D) -> Option<f32> {
+        if loc.x < 0 || loc.x >= self.dim.0 || loc.y < 0 || loc.y >= self.dim.1 {
+            return None;
+        }
+        self.resource_grid.get_value(&loc)
+    }
+
+    pub fn get_step_type(&self) -> StepType {
+        match self.step % 5 {
+            0 => StepType::Grow,
+            1 => StepType::Feed,
+            _ => StepType::Explore,
+        }
+    }
 }
 
 impl State for FungiState {
@@ -86,28 +110,23 @@ impl State for FungiState {
     }
 
     fn update(&mut self, step: u64) {
+        self.step = step;
+
         if step != 0 {
             // Update the resource grid 
             self.resource_grid.apply_to_all_values(
                 |v| { *v },
                 GridOption::READWRITE,
             );
-
-            // Update the cell grid
-            self.cell_grid.apply_to_all_values(
-                |_loc, cell| { Some(*cell) },
-                GridOption::READWRITE,
-            );
         }
 
         self.resource_grid.lazy_update();
         self.cell_grid.lazy_update();
-
-        self.step = step;
     }
 
     fn before_step(&mut self, _schedule: &mut Schedule) {
         self.new_cells.clear();
+        self.update_cells_resource.clear();
     }
 
     fn after_step(&mut self, schedule: &mut Schedule) {
@@ -116,11 +135,26 @@ impl State for FungiState {
             schedule.schedule_repeating(Box::new(*cell), schedule.time + 1.0, 0);
         }
 
+        for (loc, val) in self.update_cells_resource.iter() {
+            if let Some(cells) = self.get_cell(loc) {
+                if let Some(cell) = cells.first() {
+                    self.cell_grid.remove_object_location(*cell, loc);
+                    schedule.dequeue(Box::new(*cell), cell.id as u32);
+
+                    let mut updated_cell = cell.clone();
+                    updated_cell.add_resource(cell.get_resource() + val);
+                    
+                    self.cell_grid.set_object_location(updated_cell, &cell.loc);
+                    schedule.schedule_repeating(Box::new(updated_cell), schedule.time + 1.0, 0);
+                }
+            }
+        }
+        
         // Add the resource grid to the plot
-        let mut total_resources = 0;
+        let mut total_resources = 0.0;
         for x in 0..self.dim.0 {
             for y in 0..self.dim.1 {
-                total_resources += self.resource_grid.get_value(&Int2D { x, y }).unwrap_or(0);
+                total_resources += self.resource_grid.get_value(&Int2D { x, y }).unwrap_or(0.0);
             }
         }
 
@@ -215,7 +249,7 @@ fn generate_resources(state: &mut FungiState) {
                 let yi = y as usize;
 
                 // Check if the cell is already occupied
-                if state.resource_grid.get_value(&Int2D { x: xi as i32, y: yi as i32 }).unwrap_or(0) != 0 {
+                if state.resource_grid.get_value(&Int2D { x: xi as i32, y: yi as i32 }).unwrap_or(0.0) != 0.0 {
                     continue;
                 }
 
@@ -237,6 +271,7 @@ fn generate_core_cells(state: &mut FungiState, schedule: &mut Schedule) {
             x: rng.gen_range(0..state.dim.0),
             y: rng.gen_range(0..state.dim.1),
         };
+
         // Check if the cell is already occupied        
         let cell = Cell::new(
             id,
