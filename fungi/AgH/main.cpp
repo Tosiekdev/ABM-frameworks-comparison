@@ -1,6 +1,8 @@
 #include <iostream>
 
+#include "FungiModel.hpp"
+
 int main() {
-    std::cout << "Hello, World!" << std::endl;
+    FungiModel model;
     return 0;
 }
