@@ -17,7 +17,7 @@ use crate::{
     RESOURCE_CLUSTER_NUM, RESOURCE_MAX_AMOUNT, RESOURCE_MAX_CELLS, RESOURCE_CLUSTER_RADIUS, RESOURCE_MIN_AMOUNT, RESOURCE_MIN_CELLS
 };
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum StepType{
     Grow,
     Feed,
@@ -76,6 +76,18 @@ impl FungiState {
             _ => StepType::Explore,
         }
     }
+
+    pub fn get_prev_step_type(&self) -> StepType {
+        if self.step == 0 {
+            return StepType::Grow;
+        }
+
+        match (self.step - 1) % 5 {
+            0 => StepType::Grow,
+            1 => StepType::Feed,
+            _ => StepType::Explore,
+        }
+    }
 }
 
 impl State for FungiState {
@@ -117,28 +129,16 @@ impl State for FungiState {
 
     fn before_step(&mut self, _schedule: &mut Schedule) {
         self.new_cells.clear();
-        self.update_cells_resource.clear();
+
+        if self.get_step_type() == StepType::Grow {
+            self.update_cells_resource.clear();
+        }
     }
 
     fn after_step(&mut self, schedule: &mut Schedule) {
         for cell in self.new_cells.iter() {
             self.cell_grid.set_object_location(*cell, &cell.loc);
             schedule.schedule_repeating(Box::new(*cell), schedule.time + 1.0, 0);
-        }
-
-        for (loc, val) in self.update_cells_resource.iter() {
-            if let Some(cells) = self.get_cell(loc) {
-                if let Some(cell) = cells.first() {
-                    self.cell_grid.remove_object_location(*cell, loc);
-                    schedule.dequeue(Box::new(*cell), cell.id as u32);
-
-                    let mut updated_cell = cell.clone();
-                    updated_cell.add_resource(updated_cell.get_resource() + val);
-                    
-                    self.cell_grid.set_object_location(updated_cell, &cell.loc);
-                    schedule.schedule_repeating(Box::new(updated_cell), schedule.time + 1.0, 0);
-                }
-            }
         }
         
         // Add the resource grid to the plot

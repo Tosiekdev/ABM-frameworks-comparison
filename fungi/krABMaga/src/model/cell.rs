@@ -2,7 +2,7 @@ use core::{fmt, panic};
 use std::hash::{Hash, Hasher};
 use std::vec;
 
-use krabmaga::engine::{agent::Agent, location::Int2D, state::State};
+use krabmaga::engine::{agent::Agent, location::Int2D, state::State, schedule::ScheduleOptions};
 use krabmaga::rand;
 use krabmaga::rand::Rng;
 
@@ -45,7 +45,7 @@ pub struct Cell {
 
     // Exploration
     is_land_locked: bool,
-    checked_for_resources: bool,
+    // checked_for_resources: bool,
 }
 
 impl Cell {
@@ -62,7 +62,7 @@ impl Cell {
             cell_type,
             resource_amount,
             is_land_locked: false,
-            checked_for_resources: false,
+            // checked_for_resources: false,
         }
     }
 
@@ -820,9 +820,9 @@ impl Cell {
     }
 
     fn harvest_resource(&mut self, state: &mut FungiState) {
-        if self.checked_for_resources {
-            return;
-        }
+        // if self.checked_for_resources {
+        //     return;
+        // }
 
         if let Some(resource) = state.get_resource(&self.loc) {
             if resource > 0.0 {
@@ -836,7 +836,7 @@ impl Cell {
             }
         }
 
-        self.checked_for_resources = true;
+        // self.checked_for_resources = true;
     }
 
     pub fn get_resource(&self) -> f32 {
@@ -937,6 +937,8 @@ impl Cell {
                 }
             } else {
                 for neighbor in neighbors {
+                    // println!("Cell {} is sharing {} with neighbor {} at loc x {} y {}", self.id, share_amount_per_neighbor, neighbor.id, neighbor.loc.x, neighbor.loc.y);
+
                     state
                         .update_cells_resource
                         .entry(neighbor.loc)
@@ -956,10 +958,10 @@ impl Cell {
     }
 
     pub fn feed_step(&mut self, state: &mut FungiState) {
-        let neighbors = self.get_neighbors(state);
         self.harvest_resource(state);
         self.consume_resource();
-        self.revive(&neighbors);
+
+        let neighbors = self.get_neighbors(state);
         self.share_resource(state, &neighbors);
     }
 }
@@ -974,9 +976,9 @@ impl Agent for Cell {
 
         state.cell_grid.set_object_location(*self, &self.loc);
 
-        if self.state == LifeState::Dead {
-            return;
-        }
+        // if self.state == LifeState::Dead {
+        //     return;
+        // }
 
         match state.get_step_type() {
             StepType::Feed => {
@@ -999,6 +1001,29 @@ impl Agent for Cell {
 
     fn is_stopped(&mut self, _state: &mut dyn State) -> bool {
         false
+    }
+
+    fn before_step(
+            &mut self,
+            state: &mut dyn State,
+        ) -> Option<Vec<(Box<dyn Agent>, ScheduleOptions)>> {
+
+        let state = state.as_any_mut().downcast_mut::<FungiState>().unwrap();
+
+        if state.get_prev_step_type() == StepType::Feed {
+            if state.update_cells_resource.contains_key(&self.loc) {
+                let resource = state.update_cells_resource.get(&self.loc).unwrap();
+                self.add_resource(*resource);
+                state.update_cells_resource.remove(&self.loc);
+            }
+
+            if self.state == LifeState::Dead {
+                let neighbors = self.get_neighbors(state);
+                self.revive(&neighbors);
+            }
+        }
+
+        None
     }
 }
 
