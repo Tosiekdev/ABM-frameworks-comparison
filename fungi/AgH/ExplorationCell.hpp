@@ -16,4 +16,10 @@ struct ExplorationCell {
 
 private:
     bool alive;
+
+    static constexpr float directOppositeChance = 0.9f;
+    static constexpr float broadOppositeChance = 0.01f;
+
+    static constexpr float maxNgh = 0.2f;
+    static constexpr float safeNgh = 0.1f;
 };
