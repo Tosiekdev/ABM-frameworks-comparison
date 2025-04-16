@@ -45,7 +45,7 @@ pub struct Cell {
 
     // Exploration
     is_land_locked: bool,
-    // checked_for_resources: bool,
+    checked_for_resources: bool,
 }
 
 impl Cell {
@@ -62,7 +62,7 @@ impl Cell {
             cell_type,
             resource_amount,
             is_land_locked: false,
-            // checked_for_resources: false,
+            checked_for_resources: false,
         }
     }
 
@@ -820,9 +820,9 @@ impl Cell {
     }
 
     fn harvest_resource(&mut self, state: &mut FungiState) {
-        // if self.checked_for_resources {
-        //     return;
-        // }
+        if self.checked_for_resources {
+            return;
+        }
 
         if let Some(resource) = state.get_resource(&self.loc) {
             if resource > 0.0 {
@@ -833,14 +833,10 @@ impl Cell {
                     self.resource_amount += HARVEST_AMOUNT;
                     state.resource_grid.set_value_location(resource - HARVEST_AMOUNT, &self.loc);
                 }
+            } else {
+                self.checked_for_resources = true;
             }
         }
-
-        // self.checked_for_resources = true;
-    }
-
-    pub fn get_resource(&self) -> f32 {
-        self.resource_amount
     }
 
     pub fn add_resource(&mut self, amount: f32) {
