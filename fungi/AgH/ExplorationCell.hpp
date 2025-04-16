@@ -6,7 +6,7 @@
 struct FungiModel;
 
 struct ExplorationCell {
-    explicit ExplorationCell(const int res) : resources(res) {}
+    explicit ExplorationCell(const float res) : resources(res) {}
 
     void step(FungiModel& model);
 
@@ -16,10 +16,12 @@ struct ExplorationCell {
 
     std::optional<agh::Point> pos;
 
+    void addResources(float res);
+
 private:
     bool alive{true};
-    int resources;
-    int consumption{1};
+    float resources;
+    float consumption{1.f};
 
     static constexpr float directOppositeChance = 0.9f;
     static constexpr float broadOppositeChance = 0.01f;
