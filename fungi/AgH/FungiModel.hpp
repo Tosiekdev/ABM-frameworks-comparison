@@ -18,7 +18,7 @@ struct FungiModel : agh::Model<CoreCell, ExplorationCell> {
     bool shouldEnd(int epochs);
 
     agh::Field<CoreCell, ExplorationCell> fungus;
-    agh::ValueLayer<int> resources;
+    agh::ValueLayer<float> resources;
     Scheduler& schedule;
     int epochs;
 };

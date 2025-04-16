@@ -18,7 +18,7 @@ void CoreCell::step(FungiModel& model) {
 
 
     if (!nghs) {
-        const int childResources = resources;
+        const float childResources = resources;
         const int dir = random();
         resources = 0;
         const agh::Point childPos{pos->x + x(DIRECTIONS[dir]), pos->y + y(DIRECTIONS[dir])};
@@ -30,7 +30,7 @@ void CoreCell::step(FungiModel& model) {
             model.schedule.v.scheduleRepeating(cell, model.epochs + 3, 1, 3);
         } else {
             // or add resources to the existing
-            std::visit([=](auto c) { c->addResources(resources); }, *model.fungus.getAgent(childPos));
+            std::visit([&](auto c) { c->addResources(resources); }, *model.fungus.getAgent(childPos));
         }
         return;
     }
@@ -58,7 +58,7 @@ void CoreCell::step(FungiModel& model) {
 
     for (size_t i = 0; i < 8; ++i) {
         if (!presents[i]) continue;
-        const int childResources = resources;
+        const float childResources = resources;
         resources = 0;
         const agh::Point childPos{pos->x + x(DIRECTIONS[(i + 4) % 8]), pos->y + y(DIRECTIONS[(i + 4) % 8])};
         if (model.fungus.isEmpty(childPos)) {
@@ -66,7 +66,7 @@ void CoreCell::step(FungiModel& model) {
             model.fungus.addAgent(cell, childPos);
             model.schedule.v.scheduleRepeating(cell, model.epochs + 1, 1);
         } else {
-            std::visit([=](auto c) { c->addResources(resources); }, *model.fungus.getAgent(childPos));
+            std::visit([&](auto c) { c->addResources(resources); }, *model.fungus.getAgent(childPos));
         }
         return;
     }
@@ -88,7 +88,7 @@ void CoreCell::step(FungiModel& model) {
     const float rand = rrandom();
     for (size_t i = 1; i <= 8; ++i) {
         if (rand < std::accumulate(probabilities.begin(), probabilities.end() + i, 0.f)) {
-            const int childResources = static_cast<int>(static_cast<float>(resources) * 0.9f);
+            const float childResources = static_cast<int>(static_cast<float>(resources) * 0.9f);
             resources -= childResources;
             const agh::Point childPos{pos->x + x(DIRECTIONS[i - 1]), pos->y + y(DIRECTIONS[i - 1])};
             if (model.fungus.isEmpty(childPos)) {
@@ -96,7 +96,7 @@ void CoreCell::step(FungiModel& model) {
                 model.fungus.addAgent(cell, childPos);
                 model.schedule.v.scheduleRepeating(cell, model.epochs + 1, 1);
             } else {
-                std::visit([=](auto c) { c->addResources(resources); }, *model.fungus.getAgent(childPos));
+                std::visit([&](auto c) { c->addResources(resources); }, *model.fungus.getAgent(childPos));
             }
             return;
         }
@@ -108,40 +108,41 @@ void CoreCell::step(FungiModel& model) {
 void CoreCell::advance(FungiModel& model) {
     share();
 
-    if (const int available = model.resources.get(*pos); available) {
-        const int harvested = std::min(10, available);
+    if (const float available = model.resources.get(*pos); available) {
+        const float harvested = std::min(10.f, available);
         model.resources.setOnRead(*pos, available - harvested);
         resources += harvested;
     }
 
-    if (resources < 1) {
+    useResources();
+}
+
+void CoreCell::addResources(const float res) {
+    resources += res;
+}
+
+void CoreCell::share() {
+    if (resources <= 3.f) {
+        return;
+    }
+
+    float toShare{};
+
+    if (resources < 10.f) {
+        toShare = resources / 2.f;
+    } else {
+        toShare = resources * 0.8f;
+    }
+
+}
+
+void CoreCell::useResources() {
+    if (resources < 1.f) {
         alive = false;
     }
 
     resources -= consumption;
 }
-
-void CoreCell::addResources(const int res) {
-    resources += res;
-}
-
-int CoreCell::share() {
-    if (resources <= 3) {
-        return 0;
-    }
-
-    if (resources < 10) {
-        const int share = resources / 2;
-        resources -= share;
-        return share;
-    }
-
-    const int share = static_cast<int>(resources * 0.8);
-    resources -= share;
-    return share;
-}
-
-void CoreCell::useResources() {}
 
 int CoreCell::random() {
     static std::random_device rand;
