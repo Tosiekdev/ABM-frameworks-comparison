@@ -9,6 +9,10 @@ license = "MIT"
 [dependencies]
 krabmaga = "0.5.*"
 
+[dependencies.uuid]
+version = "1.6"
+features = ["v4", "js"]
+
 [features]
 visualization = ["krabmaga/visualization"]
 visualization_wasm = ["krabmaga/visualization_wasm"]
