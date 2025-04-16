@@ -24,6 +24,7 @@ private:
     int share();
     void useResources();
     static int random();
+    static float rrandom();
 
     bool alive{true};
     int resources;
