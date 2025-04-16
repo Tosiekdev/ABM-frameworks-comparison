@@ -2,13 +2,22 @@ use core::{fmt, panic};
 use std::hash::{Hash, Hasher};
 use std::vec;
 
-use krabmaga::engine::{agent::Agent, location::Int2D, state::State, schedule::ScheduleOptions};
+use krabmaga::engine::{
+    agent::Agent, location::Int2D,
+    state::State, schedule::ScheduleOptions
+};
 use krabmaga::rand;
 use krabmaga::rand::Rng;
 
 use super::state::{FungiState, StepType};
 use crate::{
-    BROAD_OPPOSITE_CHANCE, CONSUME_AMOUNT, DIRECT_OPPOSITE_CHANCE, EXPLORATION_BROAD_OPPOSITE_CHANCE, EXPLORATION_DIRECT_OPPOSITE_CHANCE, EXPLORATION_MAX_NEIGHBOR_BEFORE_STARVATION, EXPLORATION_SAFE_NEIGHBOR, HARVEST_AMOUNT, MAX_NEIGHBOR_BEFORE_STARVATION, SAFE_NEIGHBOR
+    BROAD_OPPOSITE_CHANCE, CONSUME_AMOUNT,
+    DIRECT_OPPOSITE_CHANCE,
+    EXPLORATION_BROAD_OPPOSITE_CHANCE,
+    EXPLORATION_DIRECT_OPPOSITE_CHANCE,
+    EXPLORATION_MAX_NEIGHBOR_BEFORE_STARVATION,
+    EXPLORATION_SAFE_NEIGHBOR, HARVEST_AMOUNT,
+    MAX_NEIGHBOR_BEFORE_STARVATION, SAFE_NEIGHBOR
 };
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -45,7 +54,8 @@ pub struct Cell {
 
     // Exploration
     is_land_locked: bool,
-    checked_for_resources: bool,
+    checked_for_resources: bool, // no food at agent loc 
+    just_eaten: bool
 }
 
 impl Cell {
@@ -63,6 +73,7 @@ impl Cell {
             resource_amount,
             is_land_locked: false,
             checked_for_resources: false,
+            just_eaten: false
         }
     }
 
@@ -132,21 +143,19 @@ impl Cell {
 
     fn decide_core_development(&mut self, state: &mut FungiState){
         let mut empty_cells = Vec::new();
-        let neighborhood_pos = self.get_neighborhood_pos(state);
-        for loc in &neighborhood_pos {
-            if  state.cell_grid.get_objects(&loc) == None {
-                empty_cells.push(*loc);
+        let mut neighbour_count = 0;
+        for loc in self.get_neighborhood_pos(state) {
+            if state.cell_grid.get_objects(&loc).is_none()
+                && state.new_cells.iter().find(|cell| cell.loc == loc).is_none() {
+                empty_cells.push(loc);
+            } else {
+                neighbour_count += 1;
             }
         }
-
-        // println!("Cell {} is deciding to develop into a new cell.\n", self.id);
-        // println!("Empty cells: {:?}\n", empty_cells.len());
         
         let mut rng = rand::thread_rng();
 
         if empty_cells.len() == 8 {
-            // println!("Cell {} is creating a new cell at random loc.\n", self.id);
-
             let new_loc = empty_cells[rng.gen_range(0..empty_cells.len())];
 
             let new_cell = Cell::new(
@@ -169,27 +178,23 @@ impl Cell {
         let has_bottom_left = !empty_cells.contains(&self.expansion_to_loc(ExpansionDirection::BottomLeft));
         let has_bottom_right = !empty_cells.contains(&self.expansion_to_loc(ExpansionDirection::BottomRight));
 
-        let neighbour_count = neighborhood_pos.len() - empty_cells.len();
         let mut deactivation_prob: f32 = neighbour_count as f32 * 0.1;
 
         if deactivation_prob > MAX_NEIGHBOR_BEFORE_STARVATION {
             deactivation_prob = 0.95;
-        } else if deactivation_prob <= SAFE_NEIGHBOR {
+        }
+        if deactivation_prob <= SAFE_NEIGHBOR {
             deactivation_prob = 0.01;
         }
 
         if rng.gen::<f32>() < deactivation_prob {
-            // print!("Cell {} is deactivating.\n", self.id);
-            if neighbour_count > 1 || self.sees_resource(state).is_none() {
-                // println!("Neighbour count: {} or no food", neighbour_count);
+            if neighbour_count > 1 || self.checked_for_resources {
                 self.state = LifeState::Dead;
                 return;
             } else if self.resource_amount < 0.5 {
-                // println!("Not enough resources: {}", self.resource_amount);
                 self.state = LifeState::Dead;
                 return;
             }
-            // println!("Cell {} is exploring.\n", self.id);
 
             let child_resource = self.resource_amount;
             self.resource_amount = 0.0;
@@ -400,7 +405,6 @@ impl Cell {
             + bottom_left_prob;
 
         if total < 0.1 {
-            // println!("Cell {} is deactivating.\n", self.id);
             self.state = LifeState::Dead;
             return;
         }
@@ -548,7 +552,8 @@ impl Cell {
         let mut empty_cells = Vec::new();
         let neighborhood_pos = self.get_neighborhood_pos(state);
         for loc in &neighborhood_pos {
-            if  state.cell_grid.get_objects(&loc) == None {
+            if state.cell_grid.get_objects(&loc).is_none()
+                && state.new_cells.iter().find(|cell| cell.loc == *loc).is_none() {
                 empty_cells.push(*loc);
             }
         }
@@ -677,7 +682,6 @@ impl Cell {
             + bottom_left_prob;
 
         if total < 0.1 {
-            // println!("Cell {} is deactivating.\n", self.id);
             self.state = LifeState::Dead;
             return;
         }
@@ -827,7 +831,7 @@ impl Cell {
         if let Some(resource) = state.get_resource(&self.loc) {
             if resource > 0.0 {
                 if resource < HARVEST_AMOUNT {
-                    self.resource_amount += resource;
+                    self.add_resource(resource);
                     state.resource_grid.set_value_location(0.0, &self.loc);
                 } else {
                     self.resource_amount += HARVEST_AMOUNT;
@@ -848,7 +852,7 @@ impl Cell {
             return;
         }
 
-        if self.resource_amount > CONSUME_AMOUNT {
+        if self.resource_amount >= CONSUME_AMOUNT {
             self.resource_amount -= CONSUME_AMOUNT;
         } else {
             // Starve
@@ -933,8 +937,6 @@ impl Cell {
                 }
             } else {
                 for neighbor in neighbors {
-                    // println!("Cell {} is sharing {} with neighbor {} at loc x {} y {}", self.id, share_amount_per_neighbor, neighbor.id, neighbor.loc.x, neighbor.loc.y);
-
                     state
                         .update_cells_resource
                         .entry(neighbor.loc)
@@ -958,6 +960,10 @@ impl Cell {
         self.consume_resource();
 
         let neighbors = self.get_neighbors(state);
+        if self.state == LifeState::Dead {
+            self.revive(&neighbors);
+        }
+
         self.share_resource(state, &neighbors);
     }
 }
@@ -965,32 +971,24 @@ impl Cell {
 impl Agent for Cell {
     fn step(&mut self, state: &mut dyn State) {
         let state = state.as_any_mut().downcast_mut::<FungiState>().unwrap();
-        
-        // println!("{}-> Cell {}, resource {}, state: {:?} \n", state.step, self.id, self.resource_amount, self.state);
-
-        // state.update_cells_resource.push((self.loc, 2.0));
 
         state.cell_grid.set_object_location(*self, &self.loc);
 
-        // if self.state == LifeState::Dead {
-        //     return;
-        // }
+        if state.total_alive_cells == 0 && state.step != 0 {
+            self.feed_step(state);
+            self.just_eaten = true;
+            return;
+        }
 
         match state.get_step_type() {
             StepType::Feed => {
-                // println!("BEFORE: {} (FEED) -> Cell {}, resource {}, state: {:?} \n", state.step, self.id, self.resource_amount, self.state);
                 self.feed_step(state);
-                // println!("AFTER: {} (FEED) -> Cell {}, resource {}, state: {:?} \n", state.step, self.id, self.resource_amount, self.state);
             }
             StepType::Grow => {
-                // println!("BEFORE: {} (GROW) -> Cell {}, resource {}, state: {:?}\n", state.step, self.id, self.resource_amount, self.state);
                 self.grow_step(state);
-                // println!("AFTER: {} (GROW) -> Cell {}, resource {}, state: {:?} \n", state.step, self.id, self.resource_amount, self.state);
             }
             StepType::Explore => {
-                // println!("BEFORE: {} (EXPLORE) -> Cell {}, resource {}, state: {:?} \n", state.step, self.id, self.resource_amount, self.state);
                 self.explore_step(state);
-                // println!("AFTER: {} (EXPLORE) -> Cell {}, resource {}, state: {:?} \n", state.step, self.id, self.resource_amount, self.state);
             }
         }
     }
@@ -1006,17 +1004,14 @@ impl Agent for Cell {
 
         let state = state.as_any_mut().downcast_mut::<FungiState>().unwrap();
 
-        if state.get_prev_step_type() == StepType::Feed {
+        if state.get_prev_step_type() == StepType::Feed || self.just_eaten {
             if state.update_cells_resource.contains_key(&self.loc) {
                 let resource = state.update_cells_resource.get(&self.loc).unwrap();
                 self.add_resource(*resource);
                 state.update_cells_resource.remove(&self.loc);
             }
-
-            if self.state == LifeState::Dead {
-                let neighbors = self.get_neighbors(state);
-                self.revive(&neighbors);
-            }
+            
+            self.just_eaten = false;
         }
 
         None

@@ -13,8 +13,10 @@ use krabmaga::rand;
 use krabmaga::rand::Rng;
 
 use super::cell::{Cell, CellType};
+use crate::model::cell::LifeState;
 use crate::{
-    RESOURCE_CLUSTER_NUM, RESOURCE_MAX_AMOUNT, RESOURCE_MAX_CELLS, RESOURCE_CLUSTER_RADIUS, RESOURCE_MIN_AMOUNT, RESOURCE_MIN_CELLS
+    RESOURCE_CLUSTER_NUM, RESOURCE_MAX_AMOUNT,
+    RESOURCE_CLUSTER_RADIUS, RESOURCE_MIN_AMOUNT
 };
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -33,6 +35,7 @@ pub struct FungiState{
     pub initial_num_cells: i32,
     pub new_cells: Vec<Cell>,
     pub update_cells_resource: HashMap<Int2D, f32>,
+    pub total_alive_cells: i32,
 }
 
 impl FungiState {
@@ -46,6 +49,7 @@ impl FungiState {
             initial_num_cells: 1,
             new_cells: Vec::new(),
             update_cells_resource: HashMap::new(),
+            total_alive_cells: 0
         }
     }
 
@@ -136,12 +140,13 @@ impl State for FungiState {
     }
 
     fn after_step(&mut self, schedule: &mut Schedule) {
+        // Add new cells to the grid
         for cell in self.new_cells.iter() {
             self.cell_grid.set_object_location(*cell, &cell.loc);
             schedule.schedule_repeating(Box::new(*cell), schedule.time + 1.0, 0);
         }
-        
-        // Add the resource grid to the plot
+
+        // Calculate the total resources in the grid
         let mut total_resources = 0.0;
         for x in 0..self.dim.0 {
             for y in 0..self.dim.1 {
@@ -154,18 +159,23 @@ impl State for FungiState {
         let mut total_core_cells = 0;
         let mut total_exploration_cells = 0;
 
+        self.total_alive_cells = 0;
+
         for n in agents {
             if let Some(cell) = n.downcast_ref::<Cell>() {
+
                 total_cells += 1;
                 if cell.get_type() == CellType::Core {
                     total_core_cells += 1;
                 } else if cell.get_type() == CellType::Exploration {
                     total_exploration_cells += 1;
                 }
+                
+                if cell.state == LifeState::Alive {
+                    self.total_alive_cells += 1;
+                }
             }
         }
-
-        // println!("Total cells: {}, Core cells {}, Exploratory {}", total_cells, total_core_cells, total_exploration_cells);
 
         plot!(
             String::from("Resources over time"),
@@ -222,34 +232,22 @@ impl State for FungiState {
 fn generate_resources(state: &mut FungiState) {
     let mut rng = rand::thread_rng();
 
-    // Generate random clusters of resources
-    // Each cluster will have a random number of cells with a random value
     for _ in 0..RESOURCE_CLUSTER_NUM {
-        let center_x = rng.gen_range(0..state.dim.0) as i32;
-        let center_y = rng.gen_range(0..state.dim.1) as i32;
-        let num_cells = rng.gen_range(RESOURCE_MIN_CELLS..=RESOURCE_MAX_CELLS);
+        let x = rng.gen_range(RESOURCE_CLUSTER_RADIUS..state.dim.0-RESOURCE_CLUSTER_RADIUS);
+        let y = rng.gen_range(RESOURCE_CLUSTER_RADIUS..state.dim.1-RESOURCE_CLUSTER_RADIUS);
+        let radius = rng.gen_range(1..RESOURCE_CLUSTER_RADIUS);
 
-        for _ in 0..num_cells {
-            let dx = rng.gen_range(-RESOURCE_CLUSTER_RADIUS..=RESOURCE_CLUSTER_RADIUS); // [-state.cluster_radius, state.cluster_radius]
-            let dy = rng.gen_range(-RESOURCE_CLUSTER_RADIUS..=RESOURCE_CLUSTER_RADIUS); // [-state.cluster_radius, state.cluster_radius]
-
-            let x = center_x + dx;
-            let y = center_y + dy;
-
-            if x >= 0 && x < state.dim.0 && y >= 0 && y < state.dim.1 as i32 {
-
-                let xi = x as usize;
-                let yi = y as usize;
-
+        for j in (x - radius)..(x + radius) {
+            for k in (y - radius)..(y + radius) {
                 // Check if the cell is already occupied
-                if state.resource_grid.get_value(&Int2D { x: xi as i32, y: yi as i32 }).unwrap_or(0.0) != 0.0 {
+                if state.resource_grid.get_value(&Int2D { x: j as i32, y: k as i32 }).unwrap_or(0.0) != 0.0 {
                     continue;
                 }
 
                 // Set the value of the cell to a random value between min_val and max_val
                 state.resource_grid.set_value_location(
                     rng.gen_range(RESOURCE_MIN_AMOUNT..=RESOURCE_MAX_AMOUNT),
-                    &Int2D { x: xi as i32, y: yi as i32 }
+                    &Int2D { x: j as i32, y: k as i32 }
                 );
             }
         }
@@ -264,8 +262,7 @@ fn generate_core_cells(state: &mut FungiState, schedule: &mut Schedule) {
             x: rng.gen_range(0..state.dim.0),
             y: rng.gen_range(0..state.dim.1),
         };
-
-        // Check if the cell is already occupied        
+   
         let cell = Cell::new(
             id,
             loc,

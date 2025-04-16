@@ -14,7 +14,6 @@ impl BatchRender<FungiState> for DenseNumberGrid2D<f32> {
     }
 
     fn get_dimensions(&self) -> (u32, u32) {
-        // println!("width: {}, height: {}", self.width, self.height);
         (self.width as u32, self.height as u32)
     }
 
