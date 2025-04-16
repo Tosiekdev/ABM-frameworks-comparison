@@ -8,8 +8,10 @@
 #include <space/ValueLayer.hpp>
 #include <utilities/Concepts.hpp>
 
+struct Scheduler;
+
 struct FungiModel : agh::Model<CoreCell, ExplorationCell> {
-    explicit FungiModel(): fungus(10,10), resources(10,10) {}
+    explicit FungiModel(Scheduler& s): fungus(10,10), resources(10,10), schedule(s) {}
 
     void beforeStep();
     void afterStep();
@@ -17,6 +19,8 @@ struct FungiModel : agh::Model<CoreCell, ExplorationCell> {
 
     agh::Field<CoreCell, ExplorationCell> fungus;
     agh::ValueLayer<int> resources;
+    Scheduler& schedule;
+    int epochs;
 };
 
 static_assert(agh::SimState<FungiModel>);
