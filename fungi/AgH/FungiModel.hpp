@@ -11,16 +11,19 @@
 struct Scheduler;
 
 struct FungiModel : agh::Model<CoreCell, ExplorationCell> {
-    explicit FungiModel(Scheduler& s): fungus(10,10), resources(10,10), schedule(s) {}
+    explicit FungiModel(Scheduler& s, const int max): fungus(10, 10), resources(10, 10), schedule(s), maxEpochs(max) {}
 
-    void beforeStep();
+    void beforeStep() {}
+
     void afterStep();
-    bool shouldEnd(int epochs);
+
+    bool shouldEnd(int e);
 
     agh::Field<CoreCell, ExplorationCell> fungus;
     agh::ValueLayer<float> resources;
     Scheduler& schedule;
-    int epochs;
+    int epochs{};
+    int maxEpochs;
 };
 
 static_assert(agh::SimState<FungiModel>);

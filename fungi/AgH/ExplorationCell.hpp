@@ -10,19 +10,31 @@ struct ExplorationCell {
 
     void step(FungiModel& model);
 
+    void advance(FungiModel& model);
+
     [[nodiscard]] bool isActive() const {
         return alive;
     }
-
-    std::optional<agh::Point> pos;
 
     void addResources(float res);
 
     [[nodiscard]] float getResources() const;
 
+    std::optional<agh::Point> pos;
     bool alive{true};
+    bool isLandlocked{false};
 
 private:
+    void share(FungiModel& model);
+
+    void useResources();
+
+    static int random();
+
+    static float rrandom();
+
+    [[nodiscard]] std::optional<agh::Point> seesResources(const FungiModel& model) const;
+
     float resources;
     float consumption{1.f};
 

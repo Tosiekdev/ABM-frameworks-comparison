@@ -19,3 +19,7 @@ void FungiModel::afterStep() {
         }
     }
 }
+
+bool FungiModel::shouldEnd(const int e) {
+    return e >= maxEpochs;
+}
