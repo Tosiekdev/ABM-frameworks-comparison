@@ -21,7 +21,7 @@ struct CoreCell {
     std::optional<agh::Point> pos;
 
 private:
-    void share();
+    void share(FungiModel& model);
     void useResources();
     static int random();
     static float rrandom();
