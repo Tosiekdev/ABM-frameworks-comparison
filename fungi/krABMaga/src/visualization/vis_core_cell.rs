@@ -1,30 +1,23 @@
 use krabmaga::bevy::ecs as bevy_ecs;
 use krabmaga::bevy::prelude::{Component, Quat, Transform, Visibility};
 use krabmaga::engine::agent::Agent;
-// use krabmaga::engine::location::Int2D;
 use krabmaga::engine::state::State;
 use krabmaga::visualization::agent_render::{AgentRender, SpriteType};
 
-// use crate::model::state::FungiState;
-use crate::model::cell::{Cell, CellType};
+use crate::model::core_cell::CoreCell;
 
 #[derive(Component)]
-pub struct VisCell {
+pub struct VisCoreCell {
     pub id: u32,
 }
 
-impl AgentRender for VisCell {
-    fn sprite(&self, agent: &Box<dyn Agent>, _state: &Box<&dyn State>) -> SpriteType {
-        let agent = agent.downcast_ref::<Cell>().unwrap();
-        if agent.cell_type == CellType::Core {
-            SpriteType::Emoji(String::from("black-square-32"))
-        } else {
-            SpriteType::Emoji(String::from("gray-square-32"))
-        }
+impl AgentRender for VisCoreCell {
+    fn sprite(&self, _agent: &Box<dyn Agent>, _state: &Box<&dyn State>) -> SpriteType {
+        SpriteType::Emoji(String::from("black-square-32"))
     }
 
     fn location(&self, agent: &Box<dyn Agent>, _state: &Box<&dyn State>) -> (f32, f32, f32) {
-        let agent = agent.downcast_ref::<Cell>().unwrap();
+        let agent = agent.downcast_ref::<CoreCell>().unwrap();
         (
             agent.loc.x as f32,
             agent.loc.y as f32,

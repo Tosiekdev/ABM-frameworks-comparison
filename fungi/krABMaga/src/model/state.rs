@@ -12,18 +12,42 @@ use krabmaga::engine::{
 use krabmaga::rand;
 use krabmaga::rand::Rng;
 
-use super::cell::{Cell, CellType};
-use crate::model::cell::LifeState;
+use super::core_cell::CoreCell;
+use super::exploration_cell::ExplorationCell;
 use crate::{
     RESOURCE_CLUSTER_NUM, RESOURCE_MAX_AMOUNT,
     RESOURCE_CLUSTER_RADIUS, RESOURCE_MIN_AMOUNT
 };
 
 #[derive(Clone, Copy, PartialEq, Debug)]
+pub enum LifeState {
+    Alive,
+    Dead,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum ExpansionDirection {
+    Top,
+    Bottom,
+    Right,
+    Left,
+    TopRight,
+    TopLeft,
+    BottomLeft,
+    BottomRight
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum StepType{
     Grow,
     Feed,
     Explore
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Cell {
+    Core(CoreCell),
+    Exploration(ExplorationCell),
 }
 
 pub struct FungiState{
@@ -142,8 +166,16 @@ impl State for FungiState {
     fn after_step(&mut self, schedule: &mut Schedule) {
         // Add new cells to the grid
         for cell in self.new_cells.iter() {
-            self.cell_grid.set_object_location(*cell, &cell.loc);
-            schedule.schedule_repeating(Box::new(*cell), schedule.time + 1.0, 0);
+            match cell {
+                Cell::Core(core_cell) => {
+                    self.cell_grid.set_object_location(*cell, &core_cell.loc);
+                    schedule.schedule_repeating(Box::new(*core_cell), schedule.time + 1.0, 0);
+                },
+                Cell::Exploration(exploration_cell) => {
+                    self.cell_grid.set_object_location(*cell, &exploration_cell.loc);
+                    schedule.schedule_repeating(Box::new(*exploration_cell), schedule.time + 1.0, 0);
+                },
+            };
         }
 
         // Calculate the total resources in the grid
@@ -162,16 +194,18 @@ impl State for FungiState {
         self.total_alive_cells = 0;
 
         for n in agents {
-            if let Some(cell) = n.downcast_ref::<Cell>() {
-
+            if let Some(core_cell) = n.downcast_ref::<CoreCell>() {
                 total_cells += 1;
-                if cell.get_type() == CellType::Core {
-                    total_core_cells += 1;
-                } else if cell.get_type() == CellType::Exploration {
-                    total_exploration_cells += 1;
+                total_core_cells += 1;
+
+                if core_cell.state == LifeState::Alive {
+                    self.total_alive_cells += 1;
                 }
-                
-                if cell.state == LifeState::Alive {
+            } else if let Some(exploration_cell) = n.downcast_ref::<ExplorationCell>() {
+                total_cells += 1;
+                total_exploration_cells += 1;
+
+                if exploration_cell.state == LifeState::Alive {
                     self.total_alive_cells += 1;
                 }
             }
@@ -263,13 +297,12 @@ fn generate_core_cells(state: &mut FungiState, schedule: &mut Schedule) {
             y: rng.gen_range(0..state.dim.1),
         };
    
-        let cell = Cell::new(
+        let cell = CoreCell::new(
             id,
             loc,
-            CellType::Core,
             1000.0
         );
-        state.cell_grid.set_object_location(cell, &loc);
+        state.cell_grid.set_object_location(Cell::Core(cell), &loc);
 
         schedule.schedule_repeating(Box::new(cell), 0., 0);
     }

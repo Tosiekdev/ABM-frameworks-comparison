@@ -11,10 +11,12 @@ use krabmaga::visualization::fields::number_grid_2d::BatchRender;
 use krabmaga::visualization::simulation_descriptor::SimulationDescriptor;
 use krabmaga::visualization::visualization_state::VisualizationState;
 
-use crate::model::cell::{Cell, CellType};
-use crate::model::state::FungiState;
+use crate::model::core_cell::CoreCell;
+use crate::model::exploration_cell::ExplorationCell;
+use crate::model::state::{Cell, FungiState};
 
-use super::vis_cell::VisCell;
+use super::vis_core_cell::VisCoreCell;
+use super::vis_exploration_cell::VisExplorationCell;
 
 #[derive(Clone, Resource)]
 pub struct VisState;
@@ -49,8 +51,13 @@ impl VisualizationState<FungiState> for VisState {
         agent: &Box<dyn Agent>,
         _state: &FungiState,
     ) -> Option<Box<dyn AgentRender>> {
-        let agent = agent.downcast_ref::<Cell>().unwrap();
-        Some(Box::new(VisCell { id: agent.id as u32}))
+        if let Some(agent) = agent.downcast_ref::<CoreCell>() {
+            Some(Box::new(VisCoreCell { id: agent.id as u32}))
+        } else if let Some(agent) = agent.downcast_ref::<ExplorationCell>() {
+            Some(Box::new(VisExplorationCell { id: agent.id as u32}))
+        } else {
+            None
+        }
     }
 
     fn get_agent(
@@ -59,14 +66,26 @@ impl VisualizationState<FungiState> for VisState {
         state: &Box<&dyn State>,
     ) -> Option<Box<dyn Agent>> {
         let state = state.as_any().downcast_ref::<FungiState>().unwrap();
-        match state.cell_grid.get(&Cell::new(
+        if let Some(matching_agent) = state.cell_grid.get(&Cell::Core(CoreCell::new(
             agent_render.get_id() as i32,
             Int2D { x: 0, y: 0 },
-            CellType::Core,
             0.
-        )) {
-            Some(matching_agent) => Some(Box::new(matching_agent)),
-            None => None
+        ))) {
+            match matching_agent {
+                Cell::Core(matching_agent) => Some(Box::new(matching_agent)),
+                _ => None,
+            }
+        } else  if let Some(matching_agent) = state.cell_grid.get(&&Cell::Exploration(ExplorationCell::new(
+            agent_render.get_id() as i32,
+            Int2D { x: 0, y: 0 },
+            0.
+        ))) {
+            match matching_agent {
+                Cell::Exploration(matching_agent) => Some(Box::new(matching_agent)),
+                _ => None,
+            }
+        } else {
+            None
         }
     }
 
@@ -78,7 +97,10 @@ impl VisualizationState<FungiState> for VisState {
         asset_factory: &mut AssetHandleFactoryResource,
     ) {
         for cell in &state.new_cells {
-            let boxed_agent = &cell.as_agent();
+            let boxed_agent = match cell {
+                Cell::Core(core_cell) => &core_cell.as_agent(),
+                Cell::Exploration(exploration_cell) => &exploration_cell.as_agent(),
+            };
             let boxed_state = Box::new(state.as_state());
             let cell_vis = self.get_agent_render(boxed_agent, state);
             let SpriteType::Emoji(emoji_code) =

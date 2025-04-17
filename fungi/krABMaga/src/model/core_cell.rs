@@ -1,6 +1,5 @@
 use core::{fmt, panic};
 use std::hash::{Hash, Hasher};
-use std::vec;
 
 use krabmaga::engine::{
     agent::Agent, location::Int2D,
@@ -9,76 +8,43 @@ use krabmaga::engine::{
 use krabmaga::rand;
 use krabmaga::rand::Rng;
 
-use super::state::{FungiState, StepType};
+use super::state::{
+    Cell, FungiState, StepType,
+    LifeState, ExpansionDirection
+};
+use crate::model::exploration_cell::ExplorationCell;
 use crate::{
     BROAD_OPPOSITE_CHANCE, CONSUME_AMOUNT,
-    DIRECT_OPPOSITE_CHANCE,
-    EXPLORATION_BROAD_OPPOSITE_CHANCE,
-    EXPLORATION_DIRECT_OPPOSITE_CHANCE,
-    EXPLORATION_MAX_NEIGHBOR_BEFORE_STARVATION,
-    EXPLORATION_SAFE_NEIGHBOR, HARVEST_AMOUNT,
+    DIRECT_OPPOSITE_CHANCE, HARVEST_AMOUNT,
     MAX_NEIGHBOR_BEFORE_STARVATION, SAFE_NEIGHBOR
 };
 
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub enum LifeState {
-    Alive,
-    Dead,
-}
-
-#[derive(Clone, Copy, PartialEq)]
-pub enum CellType {
-    Core,
-    Exploration
-}
-
-#[derive(Clone, Copy, PartialEq)]
-enum ExpansionDirection {
-    Top,
-    Bottom,
-    Right,
-    Left,
-    TopRight,
-    TopLeft,
-    BottomLeft,
-    BottomRight
-}
-
 #[derive(Copy, Clone)]
-pub struct Cell {
+pub struct CoreCell {
     pub id: i32,
     pub loc: Int2D,
     pub state: LifeState,
-    pub cell_type: CellType,
     pub resource_amount: f32,
 
-    // Exploration
-    is_land_locked: bool,
-    checked_for_resources: bool, // no food at agent loc 
-    just_eaten: bool
+    // no food at agent loc 
+    checked_for_resources: bool,
+    just_ate: bool
 }
 
-impl Cell {
+impl CoreCell {
     pub fn new(
         id: i32,
         loc: Int2D,
-        cell_type: CellType,
         resource_amount: f32,
-    ) -> Cell {
-        Cell {
+    ) -> CoreCell {
+        CoreCell {
             id,
             loc,
             state: LifeState::Alive,
-            cell_type,
             resource_amount,
-            is_land_locked: false,
             checked_for_resources: false,
-            just_eaten: false
+            just_ate: false
         }
-    }
-
-    pub fn get_type(&self) -> CellType {
-        self.cell_type
     }
 
     #[allow(dead_code)]
@@ -120,33 +86,17 @@ impl Cell {
         }
     }
 
-    fn sees_resource(&self, state: &FungiState) -> Option<Int2D> {
-        for loc in vec![
-            self.expansion_to_loc(ExpansionDirection::Top),
-            self.expansion_to_loc(ExpansionDirection::Bottom),
-            self.expansion_to_loc(ExpansionDirection::Left),
-            self.expansion_to_loc(ExpansionDirection::Right),
-            self.expansion_to_loc(ExpansionDirection::TopRight),
-            self.expansion_to_loc(ExpansionDirection::TopLeft),
-            self.expansion_to_loc(ExpansionDirection::BottomRight),
-            self.expansion_to_loc(ExpansionDirection::BottomLeft)
-        ] {
-            if let Some(resource) = state.get_resource(&loc) {
-                if resource > 0.0 {
-                    return Some(loc);
-                }
-            }
-        }
-
-        None
-    }
-
     fn decide_core_development(&mut self, state: &mut FungiState){
         let mut empty_cells = Vec::new();
         let mut neighbour_count = 0;
         for loc in self.get_neighborhood_pos(state) {
             if state.cell_grid.get_objects(&loc).is_none()
-                && state.new_cells.iter().find(|cell| cell.loc == loc).is_none() {
+                && state.new_cells.iter().find(|cell| {
+                    match cell {
+                        Cell::Core(core_cell) => core_cell.loc == loc,
+                        Cell::Exploration(exploration_cell) => exploration_cell.loc == loc,
+                    }
+                }).is_none() {
                 empty_cells.push(loc);
             } else {
                 neighbour_count += 1;
@@ -158,14 +108,13 @@ impl Cell {
         if empty_cells.len() == 8 {
             let new_loc = empty_cells[rng.gen_range(0..empty_cells.len())];
 
-            let new_cell = Cell::new(
+            let new_cell = CoreCell::new(
                 state.get_next_id(),
                 new_loc,
-                CellType::Core,
                 self.resource_amount,
             );
             self.resource_amount = 0.0;
-            state.new_cells.push(new_cell);
+            state.new_cells.push(Cell::Core(new_cell));
             return;
         }
 
@@ -201,105 +150,97 @@ impl Cell {
 
             if has_top {
                 let new_loc = self.expansion_to_loc(ExpansionDirection::Bottom);
-                let new_cell = Cell::new(
+                let new_cell = ExplorationCell::new(
                     state.get_next_id(),
                     new_loc,
-                    CellType::Exploration,
                     child_resource,
                 );
                 
-                state.new_cells.push(new_cell);
+                state.new_cells.push(Cell::Exploration(new_cell));
                 return;
             }
 
             if has_bottom {
                 let new_loc = self.expansion_to_loc(ExpansionDirection::Top);
-                let new_cell = Cell::new(
+                let new_cell = ExplorationCell::new(
                     state.get_next_id(),
                     new_loc,
-                    CellType::Exploration,
                     child_resource,
                 );
                 
-                state.new_cells.push(new_cell);
+                state.new_cells.push(Cell::Exploration(new_cell));
                 return;
             }
 
             if has_left {
                 let new_loc = self.expansion_to_loc(ExpansionDirection::Right);
-                let new_cell = Cell::new(
+                let new_cell = ExplorationCell::new(
                     state.get_next_id(),
                     new_loc,
-                    CellType::Exploration,
                     child_resource,
                 );
                 
-                state.new_cells.push(new_cell);
+                state.new_cells.push(Cell::Exploration(new_cell));
                 return;
             }
 
             if has_right {
                 let new_loc = self.expansion_to_loc(ExpansionDirection::Left);
-                let new_cell = Cell::new(
+                let new_cell = ExplorationCell::new(
                     state.get_next_id(),
                     new_loc,
-                    CellType::Exploration,
                     child_resource,
                 );
                 
-                state.new_cells.push(new_cell);
+                state.new_cells.push(Cell::Exploration(new_cell));
                 return;
             }
 
             if has_top_right {
                 let new_loc = self.expansion_to_loc(ExpansionDirection::BottomLeft);
-                let new_cell = Cell::new(
+                let new_cell = ExplorationCell::new(
                     state.get_next_id(),
                     new_loc,
-                    CellType::Exploration,
                     child_resource,
                 );
                 
-                state.new_cells.push(new_cell);
+                state.new_cells.push(Cell::Exploration(new_cell));
                 return;
             }
 
             if has_top_left {
                 let new_loc = self.expansion_to_loc(ExpansionDirection::BottomRight);
-                let new_cell = Cell::new(
+                let new_cell = ExplorationCell::new(
                     state.get_next_id(),
                     new_loc,
-                    CellType::Exploration,
                     child_resource,
                 );
                 
-                state.new_cells.push(new_cell);
+                state.new_cells.push(Cell::Exploration(new_cell));
                 return;
             }
 
             if has_bottom_right {
                 let new_loc = self.expansion_to_loc(ExpansionDirection::TopLeft);
-                let new_cell = Cell::new(
+                let new_cell = ExplorationCell::new(
                     state.get_next_id(),
                     new_loc,
-                    CellType::Exploration,
                     child_resource,
                 );
                 
-                state.new_cells.push(new_cell);
+                state.new_cells.push(Cell::Exploration(new_cell));
                 return;
             }
 
             if has_bottom_left {
                 let new_loc = self.expansion_to_loc(ExpansionDirection::TopRight);
-                let new_cell = Cell::new(
+                let new_cell = ExplorationCell::new(
                     state.get_next_id(),
                     new_loc,
-                    CellType::Exploration,
                     child_resource,
                 );
                 
-                state.new_cells.push(new_cell);
+                state.new_cells.push(Cell::Exploration(new_cell));
                 return;
             }
 
@@ -416,389 +357,104 @@ impl Cell {
         let mut threshold = top_prob;
         if random < threshold { // TOP
             let new_loc = self.expansion_to_loc(ExpansionDirection::Top);
-            let new_cell = Cell::new(
+            let new_cell = CoreCell::new(
                 state.get_next_id(),
                 new_loc,
-                CellType::Core,
                 child_resource,
             );
             
-            state.new_cells.push(new_cell);
+            state.new_cells.push(Cell::Core(new_cell));
             return;
         }
 
         threshold += bottom_prob;
         if random < threshold { // BOTTOM
             let new_loc = self.expansion_to_loc(ExpansionDirection::Bottom);
-            let new_cell = Cell::new(
+            let new_cell = CoreCell::new(
                 state.get_next_id(),
                 new_loc,
-                CellType::Core,
                 child_resource,
             );
             
-            state.new_cells.push(new_cell);
+            state.new_cells.push(Cell::Core(new_cell));
             return;
         }
 
         threshold += left_prob;
         if random < threshold { // LEFT
             let new_loc = self.expansion_to_loc(ExpansionDirection::Left);
-            let new_cell = Cell::new(
+            let new_cell = CoreCell::new(
                 state.get_next_id(),
                 new_loc,
-                CellType::Core,
                 child_resource,
             );
             
-            state.new_cells.push(new_cell);
+            state.new_cells.push(Cell::Core(new_cell));
             return;
         }
 
         threshold += right_prob;
         if random < threshold { // RIGHT
             let new_loc = self.expansion_to_loc(ExpansionDirection::Right);
-            let new_cell = Cell::new(
+            let new_cell = CoreCell::new(
                 state.get_next_id(),
                 new_loc,
-                CellType::Core,
                 child_resource,
             );
             
-            state.new_cells.push(new_cell);
+            state.new_cells.push(Cell::Core(new_cell));
             return;
         }
 
         threshold += top_right_prob;
         if random < threshold { // TOP RIGHT
             let new_loc = self.expansion_to_loc(ExpansionDirection::TopRight);
-            let new_cell = Cell::new(
+            let new_cell = CoreCell::new(
                 state.get_next_id(),
                 new_loc,
-                CellType::Core,
                 child_resource,
             );
             
-            state.new_cells.push(new_cell);
+            state.new_cells.push(Cell::Core(new_cell));
             return;
         }
 
         threshold += top_left_prob;
         if random < threshold { // TOP LEFT
             let new_loc = self.expansion_to_loc(ExpansionDirection::TopLeft);
-            let new_cell = Cell::new(
+            let new_cell = CoreCell::new(
                 state.get_next_id(),
                 new_loc,
-                CellType::Core,
                 child_resource,
             );
             
-            state.new_cells.push(new_cell);
+            state.new_cells.push(Cell::Core(new_cell));
             return;
         }
 
         threshold += bottom_right_prob;
         if random < threshold { // BOTTOM RIGHT
             let new_loc = self.expansion_to_loc(ExpansionDirection::BottomRight);
-            let new_cell = Cell::new(
+            let new_cell = CoreCell::new(
                 state.get_next_id(),
                 new_loc,
-                CellType::Core,
                 child_resource,
             );
             
-            state.new_cells.push(new_cell);
+            state.new_cells.push(Cell::Core(new_cell));
             return;
         }
 
         threshold += bottom_left_prob;
         if random < threshold { // BOTTOM LEFT
             let new_loc = self.expansion_to_loc(ExpansionDirection::BottomLeft);
-            let new_cell = Cell::new(
+            let new_cell = CoreCell::new(
                 state.get_next_id(),
                 new_loc,
-                CellType::Core,
                 child_resource,
             );
             
-            state.new_cells.push(new_cell);
-            return;
-        }
-    }
-
-    fn decide_exploration_development(&mut self, state: &mut FungiState) {
-        if self.is_land_locked {
-            self.state = LifeState::Dead;
-            return;
-        }
-
-        if let Some(resource_loc) = self.sees_resource(state) {
-            let cell = state.get_cell(&resource_loc);
-            if cell.is_none() {
-                let child_resource = self.resource_amount;
-                self.resource_amount = 0.0;
-                let new_cell = Cell::new(
-                    state.get_next_id(),
-                    resource_loc,
-                    CellType::Core,
-                    child_resource,
-                );
-                state.new_cells.push(new_cell);
-                return;
-            }
-        }
-
-
-        let mut empty_cells = Vec::new();
-        let neighborhood_pos = self.get_neighborhood_pos(state);
-        for loc in &neighborhood_pos {
-            if state.cell_grid.get_objects(&loc).is_none()
-                && state.new_cells.iter().find(|cell| cell.loc == *loc).is_none() {
-                empty_cells.push(*loc);
-            }
-        }
-
-        let mut rng = rand::thread_rng();
-        
-        let has_top = !empty_cells.contains(&self.expansion_to_loc(ExpansionDirection::Top));
-        let has_bottom = !empty_cells.contains(&self.expansion_to_loc(ExpansionDirection::Bottom));
-        let has_left = !empty_cells.contains(&self.expansion_to_loc(ExpansionDirection::Left));
-        let has_right = !empty_cells.contains(&self.expansion_to_loc(ExpansionDirection::Right));
-        let has_top_left = !empty_cells.contains(&self.expansion_to_loc(ExpansionDirection::TopLeft));
-        let has_top_right = !empty_cells.contains(&self.expansion_to_loc(ExpansionDirection::TopRight));
-        let has_bottom_left = !empty_cells.contains(&self.expansion_to_loc(ExpansionDirection::BottomLeft));
-        let has_bottom_right = !empty_cells.contains(&self.expansion_to_loc(ExpansionDirection::BottomRight));
-
-        let neighbour_count = neighborhood_pos.len() - empty_cells.len();
-        let mut deactivation_prob: f32 = neighbour_count as f32 * 0.1;
-
-        if deactivation_prob > EXPLORATION_MAX_NEIGHBOR_BEFORE_STARVATION {
-            deactivation_prob = 0.95;
-        } else if deactivation_prob <= EXPLORATION_SAFE_NEIGHBOR {
-            deactivation_prob = 0.01;
-        }
-
-        if rng.gen::<f32>() < deactivation_prob {
-            self.state = LifeState::Dead;
-            return;
-        }
-
-        let mut top_prob: f32 = 0.0;
-        let mut bottom_prob: f32 = 0.0;
-        let mut left_prob: f32 = 0.0;
-        let mut right_prob: f32 = 0.0;
-        let mut top_right_prob: f32 = 0.0;
-        let mut top_left_prob: f32 = 0.0;
-        let mut bottom_right_prob: f32 = 0.0;
-        let mut bottom_left_prob: f32 = 0.0;
-
-        if has_top {
-            bottom_prob += EXPLORATION_DIRECT_OPPOSITE_CHANCE;
-            bottom_left_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
-            bottom_right_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
-        }
-
-        if has_bottom {
-            top_prob += EXPLORATION_DIRECT_OPPOSITE_CHANCE;
-            top_left_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
-            top_right_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
-        }
-
-        if has_left {
-            right_prob += EXPLORATION_DIRECT_OPPOSITE_CHANCE;
-            top_right_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
-            bottom_right_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
-        }
-
-        if has_right {
-            left_prob += EXPLORATION_DIRECT_OPPOSITE_CHANCE;
-            top_left_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
-            bottom_left_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
-        }
-
-        if has_top_right {
-            bottom_left_prob += EXPLORATION_DIRECT_OPPOSITE_CHANCE;
-            left_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
-            bottom_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
-        }
-
-        if has_top_left {
-            bottom_right_prob += EXPLORATION_DIRECT_OPPOSITE_CHANCE;
-            right_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
-            bottom_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
-        }
-
-        if has_bottom_right {
-            top_left_prob += EXPLORATION_DIRECT_OPPOSITE_CHANCE;
-            left_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
-            top_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
-        }
-
-        if has_bottom_left {
-            top_right_prob += EXPLORATION_DIRECT_OPPOSITE_CHANCE;
-            right_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
-            top_prob += EXPLORATION_BROAD_OPPOSITE_CHANCE;
-        }
-
-        if has_top {
-            top_prob = 0.0;
-        }
-
-        if has_bottom {
-            bottom_prob = 0.0;
-        }
-
-        if has_right {
-            right_prob = 0.0;
-        }
-
-        if has_left {
-            left_prob = 0.0;
-        }
-
-        if has_top_right {
-            top_right_prob = 0.0;
-        }
-        
-        if has_top_left {
-            top_left_prob = 0.0;
-        }
-        
-        if has_bottom_right {
-            bottom_right_prob = 0.0;
-        }
-        
-        if has_bottom_left {
-            bottom_left_prob = 0.0;
-        }
-        
-        let total = top_prob
-            + bottom_prob
-            + left_prob
-            + right_prob
-            + top_right_prob
-            + top_left_prob
-            + bottom_right_prob
-            + bottom_left_prob;
-
-        if total < 0.1 {
-            self.state = LifeState::Dead;
-            return;
-        }
-
-        let child_resource = self.resource_amount;
-        self.resource_amount = 0.0;
-        let random = rng.gen_range(0.0..total);
-
-        let mut threshold = top_prob;
-        if random < threshold { // TOP
-            let new_loc = self.expansion_to_loc(ExpansionDirection::Top);
-            let new_cell = Cell::new(
-                state.get_next_id(),
-                new_loc,
-                CellType::Exploration,
-                child_resource,
-            );
-            
-            state.new_cells.push(new_cell);
-            return;
-        }
-
-        threshold += bottom_prob;
-        if random < threshold { // BOTTOM
-            let new_loc = self.expansion_to_loc(ExpansionDirection::Bottom);
-            let new_cell = Cell::new(
-                state.get_next_id(),
-                new_loc,
-                CellType::Exploration,
-                child_resource,
-            );
-            
-            state.new_cells.push(new_cell);
-            return;
-        }
-
-        threshold += left_prob;
-        if random < threshold { // LEFT
-            let new_loc = self.expansion_to_loc(ExpansionDirection::Left);
-            let new_cell = Cell::new(
-                state.get_next_id(),
-                new_loc,
-                CellType::Exploration,
-                child_resource,
-            );
-            
-            state.new_cells.push(new_cell);
-            return;
-        }
-
-        threshold += right_prob;
-        if random < threshold { // RIGHT
-            let new_loc = self.expansion_to_loc(ExpansionDirection::Right);
-            let new_cell = Cell::new(
-                state.get_next_id(),
-                new_loc,
-                CellType::Exploration,
-                child_resource,
-            );
-            
-            state.new_cells.push(new_cell);
-            return;
-        }
-
-        threshold += top_right_prob;
-        if random < threshold { // TOP RIGHT
-            let new_loc = self.expansion_to_loc(ExpansionDirection::TopRight);
-            let new_cell = Cell::new(
-                state.get_next_id(),
-                new_loc,
-                CellType::Exploration,
-                child_resource,
-            );
-            
-            state.new_cells.push(new_cell);
-            return;
-        }
-
-        threshold += top_left_prob;
-        if random < threshold { // TOP LEFT
-            let new_loc = self.expansion_to_loc(ExpansionDirection::TopLeft);
-            let new_cell = Cell::new(
-                state.get_next_id(),
-                new_loc,
-                CellType::Exploration,
-                child_resource,
-            );
-            
-            state.new_cells.push(new_cell);
-            return;
-        }
-
-        threshold += bottom_right_prob;
-        if random < threshold { // BOTTOM RIGHT
-            let new_loc = self.expansion_to_loc(ExpansionDirection::BottomRight);
-            let new_cell = Cell::new(
-                state.get_next_id(),
-                new_loc,
-                CellType::Exploration,
-                child_resource,
-            );
-            
-            state.new_cells.push(new_cell);
-            return;
-        }
-
-        threshold += bottom_left_prob;
-        if random < threshold { // BOTTOM LEFT
-            let new_loc = self.expansion_to_loc(ExpansionDirection::BottomLeft);
-            let new_cell = Cell::new(
-                state.get_next_id(),
-                new_loc,
-                CellType::Exploration,
-                child_resource,
-            );
-            
-            state.new_cells.push(new_cell);
+            state.new_cells.push(Cell::Core(new_cell));
             return;
         }
     }
@@ -808,19 +464,7 @@ impl Cell {
             return;
         }
 
-        if self.cell_type == CellType::Core {
-            self.decide_core_development(state)
-        }
-    }
-
-    pub fn explore_step(&mut self, state: &mut FungiState) {
-        if self.state == LifeState::Dead {
-            return;
-        }
-
-        if self.cell_type == CellType::Exploration {
-            self.decide_exploration_development(state)
-        }
+        self.decide_core_development(state)
     }
 
     fn harvest_resource(&mut self, state: &mut FungiState) {
@@ -865,9 +509,14 @@ impl Cell {
         for loc in self.get_neighborhood_pos(state) {
             if let Some(cells) = state.cell_grid.get_objects(&loc) {
                 for cell in cells {
-                    if cell.id != self.id {
-                        neighbors.push(cell);
-                    }
+                    match cell {
+                        Cell::Core(_) => neighbors.push(cell),
+                        Cell::Exploration(exploration_cell) => {
+                            if exploration_cell.id != self.id {
+                                neighbors.push(cell);
+                            }
+                        },
+                    };
                 }
             }
         }
@@ -875,44 +524,27 @@ impl Cell {
         neighbors
     }
 
-    fn get_share_amount(&mut self) -> f32 {
-        if self.cell_type == CellType::Core {
-            
-            if self.resource_amount < 1.0 {
-                return 0.0
-            } else if self.resource_amount < 10.0 {
-                let share_amount = self.resource_amount / 2.0;
-                self.resource_amount -= share_amount;
-                return share_amount;
-            } else {
-                let share_amount = self.resource_amount * 0.8;
-                self.resource_amount -= share_amount;
-                return share_amount;
-            }
-
+    fn get_share_amount(&mut self) -> f32 {            
+        if self.resource_amount < 1.0 {
+            return 0.0
+        } else if self.resource_amount < 10.0 {
+            let share_amount = self.resource_amount / 2.0;
+            self.resource_amount -= share_amount;
+            return share_amount;
         } else {
-            let share_amount = self.resource_amount;
-            self.resource_amount = 0.0;
+            let share_amount = self.resource_amount * 0.8;
+            self.resource_amount -= share_amount;
             return share_amount;
         }
     }
 
-    fn revive(&mut self, neighbors: &Vec<Cell>) {
-        if (self.cell_type == CellType::Exploration
-            && neighbors.len() == 1
-            && self.resource_amount > 0.5
-            && !self.is_land_locked)
-            || self.resource_amount > 5.0 { // Revive
+    fn revive(&mut self, _neighbors: &Vec<Cell>) {
+        if self.resource_amount > 5.0 { // Revive
             self.state = LifeState::Alive;
         }
     }
 
     fn share_resource(&mut self, state: &mut FungiState, neighbors: &Vec<Cell>) {
-        if self.cell_type == CellType::Exploration
-            && neighbors.len() == 1 && !self.is_land_locked {
-            return;
-        }
-
         let share_amount = self.get_share_amount();
         if share_amount == 0.0 {
             return;
@@ -920,38 +552,43 @@ impl Cell {
 
         let share_amount_per_neighbor = share_amount / neighbors.len() as f32;
         
-        if self.cell_type == CellType::Core {
-            let exploratory_neighbors: Vec<Cell> = neighbors.clone()
-                .into_iter()
-                .filter(|neighbor| neighbor.cell_type == CellType::Exploration)
-                .collect();
+        let exploratory_neighbors: Vec<Cell> = neighbors.clone()
+            .into_iter()
+            .filter(|neighbor| {
+                match neighbor {
+                    Cell::Core(_) => false,
+                    Cell::Exploration(_) => true
+                }
+            })
+            .collect();
 
-            if exploratory_neighbors.len() > 0 {
-                let share_amount_per_exploratory_neighbor = share_amount / exploratory_neighbors.len() as f32;
-                for neighbor in exploratory_neighbors {
-                    state
-                        .update_cells_resource
-                        .entry(neighbor.loc)
-                        .and_modify(|val| *val += share_amount_per_exploratory_neighbor)
-                        .or_insert(share_amount_per_exploratory_neighbor);
-                }
-            } else {
-                for neighbor in neighbors {
-                    state
-                        .update_cells_resource
-                        .entry(neighbor.loc)
-                        .and_modify(|val| *val += share_amount_per_neighbor)
-                        .or_insert(share_amount_per_neighbor);
-                }
+        if exploratory_neighbors.len() > 0 {
+            let share_amount_per_exploratory_neighbor = share_amount / exploratory_neighbors.len() as f32;
+            for neighbor in exploratory_neighbors {
+                state
+                    .update_cells_resource
+                    .entry({
+                        match neighbor {
+                            Cell::Core(core_cell) => core_cell.loc,
+                            Cell::Exploration(exploration_cell) => exploration_cell.loc,
+                        }
+                    })
+                    .and_modify(|val| *val += share_amount_per_exploratory_neighbor)
+                    .or_insert(share_amount_per_exploratory_neighbor);
             }
         } else {
             for neighbor in neighbors {
                 state
                     .update_cells_resource
-                    .entry(neighbor.loc)
+                    .entry({
+                        match neighbor {
+                            Cell::Core(core_cell) => core_cell.loc,
+                            Cell::Exploration(exploration_cell) => exploration_cell.loc,
+                        }
+                    })
                     .and_modify(|val| *val += share_amount_per_neighbor)
                     .or_insert(share_amount_per_neighbor);
-            } 
+            }
         }
     }
 
@@ -968,15 +605,15 @@ impl Cell {
     }
 }
 
-impl Agent for Cell {
+impl Agent for CoreCell {
     fn step(&mut self, state: &mut dyn State) {
         let state = state.as_any_mut().downcast_mut::<FungiState>().unwrap();
 
-        state.cell_grid.set_object_location(*self, &self.loc);
+        state.cell_grid.set_object_location(Cell::Core(*self), &self.loc);
 
         if state.total_alive_cells == 0 && state.step != 0 {
             self.feed_step(state);
-            self.just_eaten = true;
+            self.just_ate = true;
             return;
         }
 
@@ -987,9 +624,7 @@ impl Agent for Cell {
             StepType::Grow => {
                 self.grow_step(state);
             }
-            StepType::Explore => {
-                self.explore_step(state);
-            }
+            StepType::Explore => {} // do nothing
         }
     }
 
@@ -1004,29 +639,29 @@ impl Agent for Cell {
 
         let state = state.as_any_mut().downcast_mut::<FungiState>().unwrap();
 
-        if state.get_prev_step_type() == StepType::Feed || self.just_eaten {
+        if state.get_prev_step_type() == StepType::Feed || self.just_ate {
             if state.update_cells_resource.contains_key(&self.loc) {
                 let resource = state.update_cells_resource.get(&self.loc).unwrap();
                 self.add_resource(*resource);
                 state.update_cells_resource.remove(&self.loc);
             }
             
-            self.just_eaten = false;
+            self.just_ate = false;
         }
 
         None
     }
 }
 
-impl Eq for Cell {}
+impl Eq for CoreCell {}
 
-impl PartialEq for Cell {
-    fn eq(&self, other: &Cell) -> bool {
+impl PartialEq for CoreCell {
+    fn eq(&self, other: &CoreCell) -> bool {
         self.id == other.id
     }
 }
 
-impl Hash for Cell {
+impl Hash for CoreCell {
     fn hash<H>(&self, state: &mut H)
     where
         H: Hasher,
@@ -1035,7 +670,7 @@ impl Hash for Cell {
     }
 }
 
-impl fmt::Display for Cell {
+impl fmt::Display for CoreCell {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.id)
     }
