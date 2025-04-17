@@ -2,7 +2,7 @@ import random
 import numpy as np
 from mesa import Model
 from mesa.discrete_space import OrthogonalMooreGrid
-from .agent import CoreCell
+from .agent import CoreCell, ExplorationCell
 from mesa.discrete_space.property_layer import PropertyLayer
 
 
@@ -11,7 +11,7 @@ class FungiModel(Model):
         super().__init__()
         self.num_agents = initial_fungi
         self.random = random.Random()
-        self.grid = OrthogonalMooreGrid((width, height), random=self.random)
+        self.grid = OrthogonalMooreGrid((width, height), random=self.random, capacity=1)
         self.resource_distribution = self.generate_resource_array(width, height)
 
         self.direct_opposite_chance = 0.3
@@ -31,7 +31,7 @@ class FungiModel(Model):
         )
 
     @staticmethod
-    def generate_resource_array(width, height, num_clusters=10, cluster_radius=5, min_val=50, max_val=100):
+    def generate_resource_array(width, height, num_clusters=20, cluster_radius=10, min_val=20, max_val=40):
         resource_array = np.zeros((width, height), dtype=int)
 
         for _ in range(num_clusters):
@@ -52,16 +52,21 @@ class FungiModel(Model):
         return resource_array
 
     def step(self):
-        """Perform the model step in two stages:
-        - First, all cells assume their next state (whether they will be dead or alive)
-        - Then, all cells change state to their next state.
-        """
-        self.agents.do("decide_development")
-        self.agents.do("feed")
+        fungi_alive = sum(1 for a in self.agents if isinstance(a, CoreCell) and a.state == 1)
+
+        if fungi_alive == 0:
+            print("💀 All fungi are dead. Stopping simulation.")
+            self.running = False
+
+        self.agents.do("decide_exploration")
+        if self.steps % 3 == 0:
+            self.agents.do("decide_development")
+            self.agents.do("feed")
 
     def get_stats(self):
         num_fungi = sum(1 for a in self.agents if isinstance(a, CoreCell))
         alive_fungi = sum(1 for a in self.agents if isinstance(a, CoreCell) and a.state == 1)
+        exploration = sum(1 for a in self.agents if isinstance(a, ExplorationCell))
         total_agent_resource = sum(a.resource_amount for a in self.agents if isinstance(a, CoreCell))
         total_grid_resource = self.grid.resource.select_cells(condition=lambda data: data > 0, return_list=True)
-        return num_fungi, alive_fungi, total_agent_resource, len(total_grid_resource)
+        return num_fungi, alive_fungi, total_agent_resource, len(total_grid_resource), exploration
