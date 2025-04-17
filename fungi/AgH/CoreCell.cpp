@@ -27,7 +27,7 @@ void CoreCell::step(FungiModel& model) {
             // if no neighbours, add random one
             auto& cell = model.emplaceAgent<CoreCell>(childResources);
             model.fungus.addAgent(cell, childPos);
-            model.schedule.v.scheduleRepeating(cell, model.epochs + 3, 1, 3);
+            model.schedule.v.scheduleRepeating(cell, model.epochs + 1, 1, 1);
         } else {
             // or add resources to the existing
             std::visit([&](auto c) { c->addResources(resources); }, *model.fungus.getAgent(childPos));
@@ -119,6 +119,10 @@ void CoreCell::advance(FungiModel& model) {
 
 void CoreCell::addResources(const float res) {
     resources += res;
+}
+
+float CoreCell::getResources() const {
+    return resources;
 }
 
 void CoreCell::share(FungiModel& model) {

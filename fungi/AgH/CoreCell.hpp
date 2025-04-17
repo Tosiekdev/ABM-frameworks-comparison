@@ -18,15 +18,20 @@ struct CoreCell {
 
     void addResources(float res);
 
+    [[nodiscard]] float getResources() const;
+
     std::optional<agh::Point> pos;
+    bool alive{true};
 
 private:
     void share(FungiModel& model);
+
     void useResources();
+
     static int random();
+
     static float rrandom();
 
-    bool alive{true};
     float resources;
     float consumption{1.f};
 
