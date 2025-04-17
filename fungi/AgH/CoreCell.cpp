@@ -88,7 +88,7 @@ void CoreCell::step(FungiModel& model) {
     const float rand = rrandom();
     for (size_t i = 1; i <= 8; ++i) {
         if (rand < std::accumulate(probabilities.begin(), probabilities.end() + i, 0.f)) {
-            const float childResources = static_cast<int>(static_cast<float>(resources) * 0.9f);
+            const float childResources = resources * 0.9f;
             resources -= childResources;
             const agh::Point childPos{pos->x + x(DIRECTIONS[i - 1]), pos->y + y(DIRECTIONS[i - 1])};
             if (model.fungus.isEmpty(childPos)) {
@@ -106,9 +106,9 @@ void CoreCell::step(FungiModel& model) {
 }
 
 void CoreCell::advance(FungiModel& model) {
-    share();
+    share(model);
 
-    if (const float available = model.resources.get(*pos); available) {
+    if (const float available = model.resources.get(*pos); available > 0.f) {
         const float harvested = std::min(10.f, available);
         model.resources.setOnRead(*pos, available - harvested);
         resources += harvested;
@@ -121,7 +121,7 @@ void CoreCell::addResources(const float res) {
     resources += res;
 }
 
-void CoreCell::share() {
+void CoreCell::share(FungiModel& model) {
     if (resources <= 3.f) {
         return;
     }
@@ -133,7 +133,13 @@ void CoreCell::share() {
     } else {
         toShare = resources * 0.8f;
     }
+    resources -= toShare;
 
+    auto nghs = model.fungus.getNeighbors(*pos);
+    float perNgh = toShare / static_cast<float>(nghs.size());
+    for (auto ngh : nghs) {
+        std::visit([perNgh](auto a){ a->addResources(perNgh); }, ngh);
+    }
 }
 
 void CoreCell::useResources() {
@@ -154,6 +160,6 @@ int CoreCell::random() {
 float CoreCell::rrandom() {
     static std::random_device rand;
     static std::mt19937 rng(rand());
-    static std::uniform_real_distribution<float> distribution(0.f);
+    static std::uniform_real_distribution distribution(0.f);
     return distribution(rng);
 }
