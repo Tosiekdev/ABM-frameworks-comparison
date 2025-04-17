@@ -18,8 +18,11 @@ struct ExplorationCell {
 
     void addResources(float res);
 
-private:
+    [[nodiscard]] float getResources() const;
+
     bool alive{true};
+
+private:
     float resources;
     float consumption{1.f};
 
