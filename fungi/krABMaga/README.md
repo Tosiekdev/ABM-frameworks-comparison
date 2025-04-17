@@ -1,5 +1,5 @@
 # Fungi Growth Simulation 
-A simple implementation of the *Fungi Growth Simulation* model, fully based on the RustAB framework. 
+A simple implementation of the *Fungi Growth Simulation* model, fully based on the krABMaga framework. 
 
 Throughout the simulation, detailed metrics are collected at each time step — including the number of **core** and **exploration** cells, as well as the current number of available resources. These metrics are gathered to generate dynamic plots that visualize how the system evolves over time.
 
