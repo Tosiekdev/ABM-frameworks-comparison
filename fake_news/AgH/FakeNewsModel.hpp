@@ -8,6 +8,7 @@
 struct AgentNode {
     AgentNode(Agent& agent) : agent(agent) {}
     Agent& agent;
+
     bool operator==(const AgentNode& rhs) const {
         return agent.id == rhs.agent.id;
     }
@@ -21,6 +22,8 @@ struct std::hash<AgentNode> {
 };
 
 struct FakeNewsModel : agh::Model<Agent> {
+    explicit FakeNewsModel(int size, float paramA, float paramB, float paramC);
+
     agh::Network<AgentNode, char> network;
 
     float a, b, c;
