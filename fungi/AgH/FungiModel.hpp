@@ -11,7 +11,8 @@
 struct Scheduler;
 
 struct FungiModel : agh::Model<CoreCell, ExplorationCell> {
-    explicit FungiModel(Scheduler& s, const int max): fungus(10, 10), resources(10, 10), schedule(s), maxEpochs(max) {}
+    explicit FungiModel(Scheduler& s, int width, int height, int max);
+    void init(int numOfCells);
 
     void beforeStep() {}
 
@@ -24,6 +25,17 @@ struct FungiModel : agh::Model<CoreCell, ExplorationCell> {
     Scheduler& schedule;
     int epochs{};
     int maxEpochs;
+
+private:
+    void genResources();
+    void genCoreCells(int num);
+    void getStats();
+
+    static constexpr int resourceR = 10;
+    static constexpr int resourceNum = 10;
+
+    static constexpr float minResources = 0.f;
+    static constexpr float maxResources = 30.f;
 };
 
 static_assert(agh::SimState<FungiModel>);

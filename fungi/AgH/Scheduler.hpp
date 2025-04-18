@@ -7,5 +7,5 @@
 #include <schedule/Schedule.hpp>
 
 struct Scheduler {
-    agh::Schedule<FungiModel, CoreCell, ExplorationCell> v;
+    agh::Schedule<FungiModel, CoreCell, ExplorationCell>* v{};
 };

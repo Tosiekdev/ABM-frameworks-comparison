@@ -24,10 +24,10 @@ void CoreCell::step(FungiModel& model) {
         const agh::Point childPos{pos->x + x(DIRECTIONS[dir]), pos->y + y(DIRECTIONS[dir])};
 
         if (model.fungus.isEmpty(childPos)) {
-            // if no neighbours, add random one
+            // if no neighbors, add a random one
             auto& cell = model.emplaceAgent<CoreCell>(childResources);
             model.fungus.addAgent(cell, childPos);
-            model.schedule.v.scheduleRepeating(cell, model.schedule.v.getEpochs() + 1, 1, 1);
+            model.schedule.v->scheduleRepeating(cell, model.schedule.v->getEpochs() + 1, 1, 1);
         } else {
             // or add resources to the existing
             std::visit([&](auto c) { c->addResources(resources); }, *model.fungus.getAgent(childPos));
@@ -64,7 +64,7 @@ void CoreCell::step(FungiModel& model) {
         if (model.fungus.isEmpty(childPos)) {
             auto& cell = model.emplaceAgent<ExplorationCell>(childResources);
             model.fungus.addAgent(cell, childPos);
-            model.schedule.v.scheduleRepeating(cell, model.schedule.v.getEpochs() + 1, 1);
+            model.schedule.v->scheduleRepeating(cell, model.schedule.v->getEpochs() + 1, 1);
         } else {
             std::visit([&](auto c) { c->addResources(resources); }, *model.fungus.getAgent(childPos));
         }
@@ -94,7 +94,7 @@ void CoreCell::step(FungiModel& model) {
             if (model.fungus.isEmpty(childPos)) {
                 auto& cell = model.emplaceAgent<ExplorationCell>(childResources);
                 model.fungus.addAgent(cell, childPos);
-                model.schedule.v.scheduleRepeating(cell, model.schedule.v.getEpochs() + 1, 1);
+                model.schedule.v->scheduleRepeating(cell, model.schedule.v->getEpochs() + 1, 1);
             } else {
                 std::visit([&](auto c) { c->addResources(resources); }, *model.fungus.getAgent(childPos));
             }
