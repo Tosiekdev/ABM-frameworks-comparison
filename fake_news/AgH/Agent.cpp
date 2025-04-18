@@ -188,6 +188,9 @@ void Agent::step(FakeNewsModel& model) {
         case R:
             ;
     }
+
+    trimConnections(model);
+    addConnections(model);
 }
 
 float Agent::StoE(FakeNewsModel& model) {
@@ -310,6 +313,25 @@ float Agent::DtoE(FakeNewsModel& model) {
     }));
 
     return age * model.a * rand<0.9, 1>() + edu * model.b * rand<0.9, 1>() + gender * model.c * rand<0.05, 0.1>() + E/N + I/N - D/N - R/N + S/N;
+}
+
+void Agent::trimConnections(FakeNewsModel& model) {
+    const auto nghs = model.network.getNeighborhood(*this);
+    for (const auto ngh : nghs) {
+        if (rand<0.f, 1.f>() < probOfTrim && ngh->agent.state != state) {
+            model.network.removeEdge(*this, *ngh);
+        }
+    }
+}
+
+void Agent::addConnections(FakeNewsModel& model) {
+    const auto nghs = model.network.getNeighborhood(*this, 2);
+
+    for (const auto ngh : nghs) {
+        if (rand<0.f, 1.f>() < probOfConnect && ngh->agent.state == state) {
+            model.network.addEdge(*this, *ngh);
+        }
+    }
 }
 
 template<float From, float To>
