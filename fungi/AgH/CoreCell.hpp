@@ -8,7 +8,7 @@
 struct FungiModel;
 
 struct CoreCell : Cell {
-    explicit CoreCell(const int initResources) : Cell(initResources) {};
+    explicit CoreCell(const int res) : Cell(res) {};
 
     void step(FungiModel& model);
 
@@ -18,27 +18,13 @@ struct CoreCell : Cell {
         return alive;
     }
 
-    void addResources(float res);
-
-    [[nodiscard]] float getResources() const;
-
-    std::optional<agh::Point> pos;
-    bool alive{true};
+    void decideDev(FungiModel& model);
 
 private:
-    void share(FungiModel& model);
-
-    void useResources();
-
     static int random();
 
     static float rrandom();
 
-    float consumption{1.f};
-
     static constexpr float directOppositeChance = 0.3f;
     static constexpr float broadOppositeChance = 0.1f;
-
-    static constexpr float maxNgh = 0.3f;
-    static constexpr float safeNgh = 0.f;
 };

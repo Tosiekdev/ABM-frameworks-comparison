@@ -5,12 +5,12 @@ namespace {
     struct CmpRes {
         int resources;
 
-        bool operator()(CoreCell* cell) {
-            return cell->resources < resources;
+        bool operator()(const CoreCell* cell) const {
+            return cell->resources >= resources;
         }
 
-        bool operator()(ExplorationCell* cell) {
-            return false;
+        bool operator()(ExplorationCell* cell) const {
+            return true;
         }
     };
 }
