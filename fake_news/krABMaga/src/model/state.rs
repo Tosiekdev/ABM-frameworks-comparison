@@ -7,7 +7,13 @@ use krabmaga::rand;
 use krabmaga::rand::Rng;
 use std::any::Any;
 
-use crate::model::node::{Node, Status};
+use crate::model::{
+    node::Node,
+    status::Status,
+    education::Education,
+    gender::Gender,
+    age::Age
+};
 use crate::INIT_EDGES;
 
 pub struct FakeNewsState {
@@ -80,6 +86,9 @@ fn generate_network(state: &mut FakeNewsState, schedule: &mut Schedule) {
         let r2: f32 = rng.gen();
 
         let init_status: Status = rng.gen();
+        let education: Education = rng.gen();
+        let gender: Gender = rng.gen();
+        let age: Age = rng.gen();
         
         let node = Node::new(
             node_id,
@@ -88,6 +97,9 @@ fn generate_network(state: &mut FakeNewsState, schedule: &mut Schedule) {
                 y: state.dim.1 * r2,
             },
             init_status,
+            education,
+            gender,
+            age,
         );
 
         state.field.set_object_location(node, node.loc);

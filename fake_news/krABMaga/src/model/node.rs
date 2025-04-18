@@ -10,45 +10,29 @@ use krabmaga::engine::{
     location::Real2D
 };
 
-use krabmaga::rand::prelude::*;
-use krabmaga::rand::distributions::{Distribution, Standard};
-
 use crate::model::state::FakeNewsState;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Status {
-    Susceptible,
-    Exposed,
-    Infected,
-    Doubtful,
-    Recovered,
-}
-
-impl Distribution<Status> for Standard {
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Status {
-        match rng.gen_range(0..=4) {
-            0 => Status::Susceptible,
-            1 => Status::Exposed,
-            2 => Status::Infected,
-            3 => Status::Doubtful,
-            _ => Status::Recovered,
-        }
-    }
-}
+use super::{age::Age, education::Education, gender::Gender, status::Status};
 
 #[derive(Clone, Copy)]
 pub struct Node {
     pub id: u32,
     pub loc: Real2D,
-    pub status: Status
+    pub status: Status,
+    pub education: Education,
+    pub gender: Gender,
+    pub age: Age
 }
 
 impl Node {
-    pub fn new(id: u32, loc: Real2D, init_status: Status) -> Self {
+    pub fn new(id: u32, loc: Real2D, init_status: Status, education: Education, gender: Gender, age: Age) -> Self {
         Node {
             id,
             loc,
-            status: init_status
+            status: init_status,
+            education,
+            gender,
+            age
         }
     }
 }
