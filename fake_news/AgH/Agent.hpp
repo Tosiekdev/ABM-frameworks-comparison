@@ -50,11 +50,18 @@ private:
 
     float DtoE(FakeNewsModel& model);
 
+    void trimConnections(FakeNewsModel& model);
+
+    void addConnections(FakeNewsModel& model);
+
     static constexpr float alfa = 0.1f;
     static constexpr float beta = 0.1f;
     static constexpr float gamma = 0.1f;
     static constexpr float delta = 0.1f;
     static constexpr float theta = 0.1f;
+
+    static constexpr float probOfTrim = 0.3f;
+    static constexpr float probOfConnect = 0.5f;
 
     template<float From, float To>
     static float rand();
