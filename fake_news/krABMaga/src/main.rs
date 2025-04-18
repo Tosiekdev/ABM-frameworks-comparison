@@ -18,6 +18,16 @@ const TOROIDAL: bool = false;
 
 pub const INIT_EDGES: usize = 2;
 
+pub const ALPHA: f32 = 0.1;
+pub const BETA: f32 = 0.1;
+pub const GAMMA: f32 = 0.1;
+pub const DELTA: f32 = 0.1;
+pub const THETA: f32 = 0.1;
+
+pub const PARAM_A: f32 = 0.1;
+pub const PARAM_B: f32 = 0.1;
+pub const PARAM_C: f32 = 0.1;
+
 #[cfg(not(any(feature = "visualization", feature = "visualization_wasm")))]
 fn main() {
     let step: u64 = 110;
