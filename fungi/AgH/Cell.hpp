@@ -8,7 +8,7 @@ struct FungiModel;
 struct Cell {
     explicit Cell(const int res) : resources(res) {}
 
-    [[nodiscard]] bool isAlive() const {
+    [[nodiscard]] bool isActive() const {
         return alive;
     }
 

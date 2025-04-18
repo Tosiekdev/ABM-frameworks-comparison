@@ -30,10 +30,6 @@ namespace {
 }
 
 void CoreCell::step(FungiModel& model) {
-    if (model.epochs % 3 != 0) {
-        return;
-    }
-
     decideDev(model);
 }
 
@@ -73,7 +69,11 @@ void CoreCell::decideDev(FungiModel& model) {
         if (rrandom() < 0.1f) {
             auto& cell = model.emplaceAgent<ExplorationCell>(sharedRes);
             model.fungus.addAgent(cell, chosenCell);
-            model.schedule.v->scheduleRepeating(cell, model.schedule.v->getEpochs() + 1, 1);
+            model.schedule.v->scheduleRepeating(cell, model.schedule.v->getEpochs() + 2, 1);
+        } else {
+            auto& cell = model.emplaceAgent<CoreCell>(sharedRes);
+            model.fungus.addAgent(cell, chosenCell);
+            model.schedule.v->scheduleRepeating(cell, model.schedule.v->getEpochs() + 4, 1);
         }
     }
 }

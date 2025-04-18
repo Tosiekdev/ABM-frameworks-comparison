@@ -8,15 +8,11 @@
 struct FungiModel;
 
 struct CoreCell : Cell {
-    explicit CoreCell(const int res) : Cell(res) {};
+    explicit CoreCell(const int res=20) : Cell(res) {};
 
     void step(FungiModel& model);
 
     void advance(FungiModel& model);
-
-    [[nodiscard]] bool isActive() const {
-        return alive;
-    }
 
     void decideDev(FungiModel& model);
 

@@ -1,143 +1,108 @@
 #include "ExplorationCell.hpp"
+
+#include <cassert>
+
 #include "Directions.hpp"
 #include "FungiModel.hpp"
 #include "Scheduler.hpp"
 
 #include <random>
 
-void ExplorationCell::step(FungiModel& model) {
-    if (isLandlocked) {
-        alive = false;
-        return;
+namespace {
+    float rrandom() {
+        static std::random_device rand;
+        static std::mt19937 rng(rand());
+        static std::uniform_real_distribution distribution(0.f);
+        return distribution(rng);
     }
 
-    if (const std::optional<agh::Point> dir = seesResources(model)) {
-        float childResources = resources;
-        resources = 0.f;
-        if (model.fungus.isEmpty(*dir)) {
-            auto& cell = model.emplaceAgent<ExplorationCell>(childResources);
-            model.fungus.addAgent(cell, *dir);
-            model.schedule.v->scheduleRepeating(cell, model.schedule.v->getEpochs() + 1, 1);
-        } else {
-            std::visit([&](auto c) { c->addResources(resources); }, *model.fungus.getAgent(*dir));
-        }
+    [[nodiscard]] agh::Point choose(const std::vector<agh::Point>& points, const std::vector<float>& weights) {
+        const float rand = rrandom();
+        float prob = 0.f;
 
-        return;
-    }
-
-    std::array<float, 8> probabilities{};
-    std::array<bool, 8> presents{};
-    int nghs{};
-
-    for (size_t i = 0; i < 8; ++i) {
-        presents[i] = !model.fungus.isEmpty({pos->x + x(DIRECTIONS[i]), pos->y + y(DIRECTIONS[i])});
-        ++nghs;
-    }
-
-    for (size_t i = 0; i < 8; ++i) {
-        if (!presents[i]) continue;
-        probabilities[(i + 4) % 8] += directOppositeChance;
-        probabilities[(i + 3) % 8] += broadOppositeChance;
-        probabilities[(i + 5) % 8] += broadOppositeChance;
-    }
-
-    if (nghs > 3) {
-        isLandlocked = true;
-    }
-
-    float deactivationProb = static_cast<float>(nghs) * 0.1f;
-    if (deactivationProb > maxNgh) {
-        deactivationProb = 0.95f;
-    }
-    if (deactivationProb <= safeNgh) {
-        deactivationProb = 0.01f;
-    }
-    if (rrandom() < deactivationProb) {
-        alive = false;
-        return;
-    }
-
-    for (size_t i = 0; i < 8; ++i) {
-        if (!presents[i]) {
-            probabilities[i] = 0.f;
-        }
-    }
-
-    const float total = std::accumulate(probabilities.begin(), probabilities.end(), 0.f);
-
-    if (total < 0.1f) {
-        alive = false;
-        return;
-    }
-
-    std::ranges::transform(probabilities, probabilities.begin(), [=](const float p) { return p / total; });
-    const float rand = rrandom();
-    for (size_t i = 1; i <= 8; ++i) {
-        if (rand < std::accumulate(probabilities.begin(), probabilities.end() + i, 0.f)) {
-            const float childResources = resources * 0.9f;
-            resources -= childResources;
-            const agh::Point childPos{pos->x + x(DIRECTIONS[i - 1]), pos->y + y(DIRECTIONS[i - 1])};
-            if (model.fungus.isEmpty(childPos)) {
-                auto& cell = model.emplaceAgent<ExplorationCell>(childResources);
-                model.fungus.addAgent(cell, childPos);
-                model.schedule.v->scheduleRepeating(cell, model.schedule.v->getEpochs() + 1, 1);
-            } else {
-                std::visit([&](auto c) { c->addResources(resources); }, *model.fungus.getAgent(childPos));
+        for (size_t i = 0; i < weights.size(); ++i) {
+            prob += weights[i];
+            if (prob > rand) {
+                return points[i];
             }
-            return;
         }
+        assert(false && "UNREACHABLE");
     }
+}
 
-    alive = false;
+void ExplorationCell::step(FungiModel& model) {
+    decideExp(model);
 }
 
 void ExplorationCell::advance(FungiModel& model) {
-    share(model);
+    if (model.epochs % 3 == 0) {
+        feed(model);
+    }
+}
 
-    if (const float available = model.resources.get(*pos); available > 0.f) {
-        const float harvested = std::min(10.f, available);
+void ExplorationCell::decideExp(FungiModel& model) {
+    if (isLandlocked) {
+        return;
+    }
+
+    auto cells = model.fungus.getNeighbors(*pos);
+    std::erase_if(cells, []<typename T>(T* agent){ return !std::is_same_v<T, ExplorationCell>; });
+
+    if (cells.size() > 2) {
+        isLandlocked = true;
+        return;
+    }
+
+    auto emptyCells = model.fungus.getNeighborhood(*pos);
+    std::erase_if(emptyCells, [&](const agh::Point p) {return !model.fungus.isEmpty(p); });
+
+    if (emptyCells.empty()) {
+        return;
+    }
+
+    std::vector<float> probabilities{};
+    for (const auto cell : emptyCells) {
+        float prob = 1.f;
+        auto nghs = model.fungus.getNeighbors(cell);
+        if (!model.fungus.isEmpty(*pos)) {
+            prob += directOppositeChance;
+        }
+        probabilities.push_back(prob);
+    }
+
+    float total = std::accumulate(probabilities.begin(), probabilities.end(), 0.f);
+    std::ranges::for_each(probabilities, [total](float& p) { p /= total; });
+
+    const agh::Point chosenCell = choose(emptyCells, probabilities);
+
+    if (model.resources.get(chosenCell) > 0) {
+        int sharedRes = share();
+        auto& cell = model.emplaceAgent<CoreCell>(sharedRes);
+        model.fungus.addAgent(cell, chosenCell);
+        model.schedule.v->scheduleRepeating(cell, model.schedule.v->getEpochs() + 4, 1);
+    }
+
+    auto& cell = model.emplaceAgent<ExplorationCell>(10);
+    model.fungus.addAgent(cell, chosenCell);
+    model.schedule.v->scheduleRepeating(cell, model.schedule.v->getEpochs() + 2, 1);
+}
+
+void ExplorationCell::feed(FungiModel& model) {
+    auto emptyCells = model.fungus.getNeighborhood(*pos);
+    std::erase_if(emptyCells, [&](const agh::Point p) {return !model.fungus.isEmpty(p); });
+
+    if (emptyCells.size() >= 7) {
+        return;
+    }
+
+    const int available = model.resources.get(*pos);
+    if (available > 0) {
+        const int harvested = std::min(5, available);
         model.resources.setOnRead(*pos, available - harvested);
         resources += harvested;
     }
 
-    useResources();
-}
-
-void ExplorationCell::addResources(const float res) {
-    resources += res;
-}
-
-float ExplorationCell::getResources() const {
-    return resources;
-}
-
-void ExplorationCell::share(FungiModel& model) {
-    if (resources <= 3.f) {
-        return;
-    }
-
-    float toShare{};
-
-    if (resources < 10.f) {
-        toShare = resources / 2.f;
-    } else {
-        toShare = resources * 0.8f;
-    }
-    resources -= toShare;
-
-    auto nghs = model.fungus.getNeighbors(*pos);
-    float perNgh = toShare / static_cast<float>(nghs.size());
-    for (auto ngh : nghs) {
-        std::visit([perNgh](auto a){ a->addResources(perNgh); }, ngh);
-    }
-}
-
-void ExplorationCell::useResources() {
-    if (resources < 1.f) {
-        alive = false;
-    }
-
-    resources -= consumption;
+    shareWithNghs(model);
 }
 
 int ExplorationCell::random() {
@@ -152,15 +117,4 @@ float ExplorationCell::rrandom() {
     static std::mt19937 rng(rand());
     static std::uniform_real_distribution distribution(0.f);
     return distribution(rng);
-}
-
-std::optional<agh::Point> ExplorationCell::seesResources(const FungiModel& model) const {
-    const std::vector<agh::Point> nghs = model.resources.getNeighborhood(*pos, 1, true, false);
-    for (auto p : nghs) {
-        if (model.resources.get(p) > 0.f) {
-            return p;
-        }
-    }
-
-    return std::nullopt;
 }
