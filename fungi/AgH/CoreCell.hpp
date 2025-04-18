@@ -1,12 +1,14 @@
 #pragma once
 
+#include "Cell.hpp"
+
 #include <optional>
 #include <space/Point.hpp>
 
 struct FungiModel;
 
-struct CoreCell {
-    explicit CoreCell(const float initResources) : resources(initResources) {};
+struct CoreCell : Cell {
+    explicit CoreCell(const int initResources) : Cell(initResources) {};
 
     void step(FungiModel& model);
 
@@ -32,7 +34,6 @@ private:
 
     static float rrandom();
 
-    float resources;
     float consumption{1.f};
 
     static constexpr float directOppositeChance = 0.3f;

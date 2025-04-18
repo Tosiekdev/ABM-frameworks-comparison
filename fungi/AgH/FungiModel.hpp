@@ -21,10 +21,11 @@ struct FungiModel : agh::Model<CoreCell, ExplorationCell> {
     bool shouldEnd(int e);
 
     agh::Field<CoreCell, ExplorationCell> fungus;
-    agh::ValueLayer<float> resources;
+    agh::ValueLayer<int> resources;
     Scheduler& schedule;
     int epochs{};
     int maxEpochs;
+    int resourceConsumption = 1;
 
 private:
     void genResources();

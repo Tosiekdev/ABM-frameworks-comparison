@@ -3,7 +3,7 @@ project(AgH)
 
 set(CMAKE_CXX_STANDARD 20)
 
-include_directories(Agent-Harmony/include)
+include_directories(../../Agent-Harmony/include)
 
 add_executable(AgH main.cpp
         FungiModel.cpp
@@ -13,4 +13,6 @@ add_executable(AgH main.cpp
         ExplorationCell.cpp
         ExplorationCell.hpp
         Directions.hpp
-        Scheduler.hpp)
+        Scheduler.hpp
+        Cell.cpp
+        Cell.hpp)

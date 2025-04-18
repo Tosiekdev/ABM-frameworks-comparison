@@ -1,12 +1,14 @@
 #pragma once
 
+#include "Cell.hpp"
+
 #include <optional>
 #include <space/Point.hpp>
 
 struct FungiModel;
 
-struct ExplorationCell {
-    explicit ExplorationCell(const float res) : resources(res) {}
+struct ExplorationCell : Cell {
+    explicit ExplorationCell(const int res) : Cell(res) {}
 
     void step(FungiModel& model);
 
@@ -35,7 +37,6 @@ private:
 
     [[nodiscard]] std::optional<agh::Point> seesResources(const FungiModel& model) const;
 
-    float resources;
     float consumption{1.f};
 
     static constexpr float directOppositeChance = 0.9f;
