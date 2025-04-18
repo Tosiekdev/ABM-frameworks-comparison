@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "FungiModel.hpp"
 #include "Scheduler.hpp"
 
@@ -8,7 +10,7 @@ int main() {
 
     s.v = &schedule;
 
-    model.init(100);
+    model.init(1);
     schedule.execute();
 
     return 0;

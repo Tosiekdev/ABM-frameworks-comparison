@@ -1,5 +1,6 @@
 #include "CoreCell.hpp"
 
+#include <iostream>
 #include <random>
 
 #include "Directions.hpp"
@@ -12,8 +13,10 @@ void CoreCell::step(FungiModel& model) {
     int nghs{};
 
     for (size_t i = 0; i < 8; ++i) {
-        presents[i] = !model.fungus.isEmpty({pos->x + x(DIRECTIONS[i]), pos->y + y(DIRECTIONS[i])});
-        ++nghs;
+        if (!model.fungus.isEmpty({pos->x + x(DIRECTIONS[i]), pos->y + y(DIRECTIONS[i])})) {
+            presents[i] = true;
+            ++nghs;
+        }
     }
 
 
@@ -50,7 +53,7 @@ void CoreCell::step(FungiModel& model) {
         deactivationProb = 0.01f;
     }
     if (rrandom() < deactivationProb) {
-        if (nghs >= 2 || resources < 5) {
+        if (nghs >= 2 || resources < 5.f) {
             alive = false;
             return;
         }
