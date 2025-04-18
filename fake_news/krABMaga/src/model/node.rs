@@ -45,7 +45,7 @@ impl Node {
         }
     }
 
-    fn compute_transition_threshold(&self, to: Status) -> f32 {
+    fn compute_transition_threshold(&self, state: &FakeNewsState, to: Status) -> f32 {
         let age_value = AGE_DISTRIBUTION
             .get(&self.status).unwrap()
             .get(&self.age).unwrap();
@@ -65,14 +65,36 @@ impl Node {
             education_value * PARAM_B * rng.gen_range(0.9..1.0) +
             gender_value * PARAM_C * rng.gen_range(0.05..0.1);
 
+        let mut total_nodes = 0.;
+        let mut total_exposed = 0.;
+        let mut total_infected = 0.;
+        let mut total_doubtful = 0.;
+        let mut total_recovered = 0.;
+        let mut total_susceptible = 0.;
 
-        // Temporarily hardcoded values for testing
-        let total_nodes = 2.;
-        let total_exposed = 1.;
-        let total_infected = 1.;
-        let total_doubtful = 0.;
-        let total_recovered = 0.;
-        let total_susceptible = 0.;
+        let edges = state.network.get_edges(*self);
+        if let Some(edges) = edges {
+            for edge in edges {
+                let neighbour_id = if edge.u == self.id {
+                    edge.v
+                } else {
+                    edge.u
+                };
+
+                if let Some(neighbour) = state.network.get_object(neighbour_id) {
+                    total_nodes += 1.0;
+                    match neighbour.status {
+                        Status::Susceptible => total_susceptible += 1.0,
+                        Status::Exposed => total_exposed += 1.0,
+                        Status::Infected => total_infected += 1.0,
+                        Status::Doubtful => total_doubtful += 1.0,
+                        Status::Recovered => total_recovered += 1.0,
+                    }
+                } else {
+                    panic!("Node {} not found in network", neighbour_id);
+                }
+            }
+        }
 
         match to {
             Status::Susceptible => {
@@ -130,16 +152,16 @@ impl Node {
         base_value
     }
 
-    fn transition_state(&mut self) {
+    fn transition_state(&mut self, state: &FakeNewsState,) {
         match self.status {
             Status::Susceptible => {
-                if self.compute_transition_threshold(Status::Exposed) > ALPHA {
+                if self.compute_transition_threshold(state, Status::Exposed) > ALPHA {
                     self.status = Status::Exposed;
                 }
             }
             Status::Exposed => {
-                let threshold_i = self.compute_transition_threshold(Status::Infected);
-                let threshold_d = self.compute_transition_threshold(Status::Doubtful);
+                let threshold_i = self.compute_transition_threshold(state, Status::Infected);
+                let threshold_d = self.compute_transition_threshold(state, Status::Doubtful);
 
                 if threshold_i > BETA && threshold_d > GAMMA {
                     self.status = if (threshold_i / BETA) > (threshold_d / GAMMA) {
@@ -154,12 +176,12 @@ impl Node {
                 }
             }
             Status::Infected => {
-                if self.compute_transition_threshold(Status::Recovered) > DELTA {
+                if self.compute_transition_threshold(state, Status::Recovered) > DELTA {
                     self.status = Status::Recovered;
                 }
             }
             Status::Doubtful => {
-                if self.compute_transition_threshold(Status::Exposed) > THETA {
+                if self.compute_transition_threshold(state, Status::Exposed) > THETA {
                     self.status = Status::Exposed;
                 }
             }
@@ -175,7 +197,7 @@ impl Agent for Node {
             .downcast_ref::<FakeNewsState>()
             .unwrap();
 
-        self.transition_state();
+        self.transition_state(state);
 
         state.network.update_node(*self);
         state.field.set_object_location(*self, self.loc);
