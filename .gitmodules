@@ -1,3 +1,6 @@
 [submodule "fungi/AgH/Agent-Harmony"]
 	path = fungi/AgH/Agent-Harmony
 	url = https://github.com/Tosiekdev/Agent-Harmony
+[submodule "Agent-Harmony"]
+	path = Agent-Harmony
+	url = https://github.com/Tosiekdev/Agent-Harmony
