@@ -5,7 +5,7 @@
 
 int main() {
     Scheduler s;
-    FungiModel model(s, 100, 100, 1000);
+    FungiModel model(s, 10, 10, 100);
     agh::Schedule<FungiModel, CoreCell, ExplorationCell> schedule(model);
 
     s.v = &schedule;

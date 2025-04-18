@@ -33,10 +33,10 @@ private:
     void getStats();
 
     static constexpr int resourceR = 10;
-    static constexpr int resourceNum = 10;
+    static constexpr int resourceNum = 20;
 
-    static constexpr float minResources = 0.f;
-    static constexpr float maxResources = 30.f;
+    static constexpr int minResources = 20;
+    static constexpr int maxResources = 40;
 };
 
 static_assert(agh::SimState<FungiModel>);

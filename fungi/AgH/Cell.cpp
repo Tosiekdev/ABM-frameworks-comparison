@@ -9,7 +9,7 @@ namespace {
             return cell->resources >= resources;
         }
 
-        bool operator()(ExplorationCell* cell) const {
+        bool operator()(ExplorationCell*) const {
             return true;
         }
     };

@@ -12,7 +12,6 @@ add_executable(AgH main.cpp
         CoreCell.hpp
         ExplorationCell.cpp
         ExplorationCell.hpp
-        Directions.hpp
         Scheduler.hpp
         Cell.cpp
         Cell.hpp)

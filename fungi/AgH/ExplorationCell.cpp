@@ -2,7 +2,6 @@
 
 #include <cassert>
 
-#include "Directions.hpp"
 #include "FungiModel.hpp"
 #include "Scheduler.hpp"
 
@@ -46,7 +45,9 @@ void ExplorationCell::decideExp(FungiModel& model) {
     }
 
     auto cells = model.fungus.getNeighbors(*pos);
-    std::erase_if(cells, []<typename T>(T* agent){ return !std::is_same_v<T, ExplorationCell>; });
+    std::erase_if(cells, [](auto agent) {
+        return std::visit([]<typename T>(T*){ return !std::is_same_v<T, ExplorationCell>; }, agent);
+    });
 
     if (cells.size() > 2) {
         isLandlocked = true;
