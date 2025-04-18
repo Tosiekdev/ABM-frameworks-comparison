@@ -3,7 +3,7 @@
 #include <schedule/Schedule.hpp>
 
 int main() {
-    FakeNewsModel model(100, 0.1f, 0.1f, 0.1f, 100);
+    FakeNewsModel model(500, 0.1f, 0.1f, 0.1f, 100);
 
     agh::Schedule<FakeNewsModel, Agent> schedule(model);
 

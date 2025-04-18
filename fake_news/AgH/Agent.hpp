@@ -60,7 +60,7 @@ private:
     static constexpr float delta = 0.1f;
     static constexpr float theta = 0.1f;
 
-    static constexpr float probOfTrim = 0.3f;
+    static constexpr float probOfTrim = 0.03f;
     static constexpr float probOfConnect = 0.5f;
 
     template<float From, float To>
