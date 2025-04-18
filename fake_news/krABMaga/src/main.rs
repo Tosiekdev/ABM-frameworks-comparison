@@ -3,10 +3,16 @@ use krabmaga::*;
 
 use model::state::FakeNewsState;
 
+#[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
+use {
+    crate::visualization::vis_state::VisState, krabmaga::bevy::prelude::Color,
+    krabmaga::bevy::prelude::FixedUpdate, krabmaga::visualization::fields::network::NetworkRender,
+    krabmaga::visualization::visualization::Visualization,
+};
 
 mod model;
 
-const POPULATION_SIZE: u32 = 3_000;
+const POPULATION_SIZE: u32 = 50;
 const DISCRETIZATION: f32 = 10.0 / 1.5;
 const TOROIDAL: bool = false;
 
@@ -22,10 +28,20 @@ fn main() {
     simulate!(state, step, 10);
 }
 
+#[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
+mod visualization;
+
 // Main used when a visualization feature is applied.
 #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
 fn main() {
-    panic!(
-        "Visualization feature is not yet implemented. Please use the non-visualization version."
-    );
+    let dim: (f32, f32) = (500., 500.);
+    let state = FakeNewsState::new(dim, POPULATION_SIZE, DISCRETIZATION, TOROIDAL);
+
+    let mut app = Visualization::default()
+        .with_window_dimensions(1000., 700.)
+        .with_simulation_dimensions(dim.0, dim.1)
+        .with_background_color(Color::rgb(255., 255., 255.))
+        .setup::<VisState, FakeNewsState>(VisState, state);
+    app.add_systems(FixedUpdate, FakeNewsState::render);
+    app.run();
 }
