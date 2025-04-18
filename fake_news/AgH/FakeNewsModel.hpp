@@ -22,9 +22,16 @@ struct std::hash<AgentNode> {
 };
 
 struct FakeNewsModel : agh::Model<Agent> {
-    explicit FakeNewsModel(int size, float paramA, float paramB, float paramC);
+    explicit FakeNewsModel(int size, float paramA, float paramB, float paramC, int maxEpochs);
 
-    agh::Network<AgentNode, char> network;
+    agh::Network<AgentNode, char> network{false};
+
+    void beforeStep() {}
+
+    void afterStep();
+
+    [[nodiscard]] bool shouldEnd(int epochs) const;
 
     float a, b, c;
+    int max;
 };

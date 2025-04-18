@@ -1,5 +1,6 @@
 #include "FakeNewsModel.hpp"
 
+#include <iostream>
 #include <random>
 
 #include "Agent.hpp"
@@ -16,8 +17,11 @@ namespace {
 }
 
 FakeNewsModel::FakeNewsModel(const int size, const float paramA, const float paramB,
-                             const float paramC) : a(paramA), b(paramB), c(paramC) {
-    static constexpr std::array states = {Agent::State::S, Agent::State::E, Agent::State::I, Agent::State::D, Agent::State::R};
+                             const float paramC,
+                             const int maxEpochs) : a(paramA), b(paramB), c(paramC), max(maxEpochs) {
+    static constexpr std::array states = {
+        Agent::State::S, Agent::State::E, Agent::State::I, Agent::State::D, Agent::State::R
+    };
     static constexpr std::array eds = {
         Agent::Education::Primary, Agent::Education::Secondary, Agent::Education::Higher, Agent::Education::Vocational
     };
@@ -36,16 +40,39 @@ FakeNewsModel::FakeNewsModel(const int size, const float paramA, const float par
 
     for (size_t i = 0; i < size; ++i) {
         emplaceAgent<Agent>(states[rand<0, states.size() - 1>()], eds[rand<0, eds.size() - 1>()],
-                                          sexes[rand<0, sexes.size() - 1>()], ages[rand<0, ages.size() - 1>()]);
+                            sexes[rand<0, sexes.size() - 1>()], ages[rand<0, ages.size() - 1>()]);
     }
 
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<size_t> dist(0, getAgents<Agent>().size());
 
-    for (auto & i : getAgents<Agent>()) {
+    for (auto& i: getAgents<Agent>()) {
         for (size_t j = 0; j < getAgents<Agent>().size() / 10; ++j) {
             network.addEdge(i, getAgents<Agent>()[dist(gen)]);
         }
     }
+}
+
+void FakeNewsModel::afterStep() {
+    std::cout <<
+            std::ranges::count_if(getAgents<Agent>(), [](const Agent& agent) {
+                return agent.state == Agent::State::S;
+            }) << " " <<
+            std::ranges::count_if(getAgents<Agent>(), [](const Agent& agent) {
+                return agent.state == Agent::State::E;
+            }) << " " <<
+            std::ranges::count_if(getAgents<Agent>(), [](const Agent& agent) {
+                return agent.state == Agent::State::I;
+            }) << " " <<
+            std::ranges::count_if(getAgents<Agent>(), [](const Agent& agent) {
+                return agent.state == Agent::State::D;
+            }) << " " <<
+            std::ranges::count_if(getAgents<Agent>(), [](const Agent& agent) {
+                return agent.state == Agent::State::R;
+            }) << std::endl;
+}
+
+bool FakeNewsModel::shouldEnd(const int epochs) const {
+    return epochs >= max;
 }

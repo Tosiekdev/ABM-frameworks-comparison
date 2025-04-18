@@ -159,12 +159,13 @@ namespace maps {
 
 void Agent::step(FakeNewsModel& model) {
     switch (state) {
-        case S:
+        case S: {
             if (StoE(model) > alfa) {
                 state = E;
             }
             break;
-        case E:
+        }
+        case E: {
             const float toI = EtoI(model);
             const float toD = EtoD(model);
             if (toI > beta && toD > gamma) {
@@ -174,17 +175,20 @@ void Agent::step(FakeNewsModel& model) {
             } else if (toD > gamma) {
                 state = D;
             }
-            break;
-        case I:
+        }
+        break;
+        case I: {
             if (ItoR(model) > delta) {
                 state = R;
             }
-            break;
-        case D:
+        }
+        break;
+        case D: {
             if (DtoE(model) > theta) {
                 state = E;
             }
-            break;
+        }
+        break;
         case R:
             ;
     }
@@ -214,7 +218,7 @@ float Agent::StoE(FakeNewsModel& model) {
         return node->agent.state == State::R;
     }));
 
-    return age * model.a * rand<0.9, 1>() + edu * model.b * rand<0.9, 1>() + gender * model.c * rand<0.05, 0.1>() + E /
+    return age * model.a * rand<0.9f, 1.f>() + edu * model.b * rand<0.9f, 1.f>() + gender * model.c * rand<0.05f, 0.1f>() + E /
            N + I / N - D / N - R / N;
 }
 
@@ -239,7 +243,7 @@ float Agent::EtoI(FakeNewsModel& model) {
         return node->agent.state == State::R;
     }));
 
-    return age * model.a * rand<0.9, 1>() + edu * model.b * rand<0.9, 1>() + gender * model.c * rand<0.05, 0.1>() + E /
+    return age * model.a * rand<0.9f, 1.f>() + edu * model.b * rand<0.9f, 1.f>() + gender * model.c * rand<0.05f, 0.1f>() + E /
            N + I / N - D / N - R / N;
 }
 
@@ -264,7 +268,8 @@ float Agent::EtoD(FakeNewsModel& model) {
         return node->agent.state == State::R;
     }));
 
-    return age * model.a * rand<0.9, 1>() + edu * model.b * rand<0.9, 1>() + gender * model.c * rand<0.05, 0.1>() - E/N - I/N + D/N + R/N;
+    return age * model.a * rand<0.9f, 1.f>() + edu * model.b * rand<0.9f, 1.f>() + gender * model.c * rand<0.05f, 0.1f>() - E /
+           N - I / N + D / N + R / N;
 }
 
 float Agent::ItoR(FakeNewsModel& model) {
@@ -288,7 +293,8 @@ float Agent::ItoR(FakeNewsModel& model) {
         return node->agent.state == State::R;
     }));
 
-    return age * model.a * rand<0.9, 1>() + edu * model.b * rand<0.9, 1>() + gender * model.c * rand<0.05, 0.1>() - E/N - I/N + D/N + R/N - S/N;
+    return age * model.a * rand<0.9f, 1.f>() + edu * model.b * rand<0.9f, 1.f>() + gender * model.c * rand<0.05f, 0.1f>() - E /
+           N - I / N + D / N + R / N - S / N;
 }
 
 float Agent::DtoE(FakeNewsModel& model) {
@@ -312,12 +318,13 @@ float Agent::DtoE(FakeNewsModel& model) {
         return node->agent.state == State::R;
     }));
 
-    return age * model.a * rand<0.9, 1>() + edu * model.b * rand<0.9, 1>() + gender * model.c * rand<0.05, 0.1>() + E/N + I/N - D/N - R/N + S/N;
+    return age * model.a * rand<0.9f, 1.f>() + edu * model.b * rand<0.9f, 1.f>() + gender * model.c * rand<0.05f, 0.1f>() + E /
+           N + I / N - D / N - R / N + S / N;
 }
 
 void Agent::trimConnections(FakeNewsModel& model) {
     const auto nghs = model.network.getNeighborhood(*this);
-    for (const auto ngh : nghs) {
+    for (const auto ngh: nghs) {
         if (rand<0.f, 1.f>() < probOfTrim && ngh->agent.state != state) {
             model.network.removeEdge(*this, *ngh);
         }
@@ -327,7 +334,7 @@ void Agent::trimConnections(FakeNewsModel& model) {
 void Agent::addConnections(FakeNewsModel& model) {
     const auto nghs = model.network.getNeighborhood(*this, 2);
 
-    for (const auto ngh : nghs) {
+    for (const auto ngh: nghs) {
         if (rand<0.f, 1.f>() < probOfConnect && ngh->agent.state == state) {
             model.network.addEdge(*this, *ngh);
         }
