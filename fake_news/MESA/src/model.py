@@ -14,7 +14,7 @@ class FakeNewsModel(Model):
 
     def __init__(
             self,
-            num_nodes=10,
+            num_nodes=100,
             avg_node_degree=3,
             seed=None,
     ):
@@ -46,4 +46,6 @@ class FakeNewsModel(Model):
 
     def step(self):
         self.agents.shuffle_do("step")
+        self.agents.shuffle_do("advance")
+        self.agents.shuffle_do("rewire")
         self.datacollector.collect(self)

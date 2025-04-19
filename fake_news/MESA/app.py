@@ -30,9 +30,9 @@ model_params = {
     },
     "num_nodes": Slider(
         label="Number of agents",
-        value=10,
+        value=100,
         min=10,
-        max=100,
+        max=1000,
         step=1,
     )
 }
@@ -67,4 +67,4 @@ page = SolaraViz(
     model_params=model_params,
     name="Virus Model",
 )
-page  # noqa
+page
