@@ -205,15 +205,7 @@ impl Node {
                 if let Some(neighbour) = state.network.get_object(neighbour_id) {
                     if self.status != neighbour.status
                         && rng.gen::<f32>() < PROB_REMOVE_CONNECTION {
-                            let x = state.network.remove_edge(*self, neighbour);
-
-                            println!("Removed connection between {} and {}", self.id, neighbour_id);
-
-                            if let Some(_) = x {
-                                println!("Removed edge from network");
-                            } else {
-                                panic!("Edge not found in network");
-                            }
+                            state.network.remove_edge(*self, neighbour);
                         } 
                 } else {
                     panic!("Node {} not found in network", neighbour_id);

@@ -6,6 +6,9 @@ use krabmaga::engine::state::State;
 use krabmaga::rand;
 use krabmaga::rand::Rng;
 use std::any::Any;
+use std::cell::RefCell;
+use krabmaga::*;
+use cfg_if::cfg_if;
 
 use crate::model::{
     node::Node,
@@ -52,12 +55,98 @@ impl State for FakeNewsState {
     fn init(&mut self, schedule: &mut Schedule) {
         self.reset();
         generate_network(self, schedule);
+        addplot!(
+            String::from("Nodes over time"),
+            String::from("Steps"),
+            String::from("Nodes"),
+            true
+        );
     }
 
     fn update(&mut self, step: u64) {
         self.field.lazy_update();
         self.network.update();
         self.step = step;
+    }
+
+    fn after_step(&mut self, _schedule: &mut Schedule) {
+        let total_nodes = RefCell::new(0);
+        let total_exposed = RefCell::new(0);
+        let total_infected = RefCell::new(0);
+        let total_doubtful = RefCell::new(0);
+        let total_recovered = RefCell::new(0);
+        let total_susceptible = RefCell::new(0);
+
+        cfg_if! {
+            if #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]{
+                for node in self.network.nodes2id.borrow().keys() {
+                    *total_nodes.borrow_mut() += 1;
+                    match node.status {
+                        Status::Exposed => *total_exposed.borrow_mut() += 1,
+                        Status::Infected => *total_infected.borrow_mut() += 1,
+                        Status::Doubtful => *total_doubtful.borrow_mut() += 1,
+                        Status::Recovered => *total_recovered.borrow_mut() += 1,
+                        Status::Susceptible => *total_susceptible.borrow_mut() += 1,
+                    }
+                }
+
+                println!("total_nodes: {}, total_exposed: {}, total_infected: {}, total_doubtful: {}, total_recovered: {}, total_susceptible: {}",
+                *total_nodes.borrow(), *total_exposed.borrow(), *total_infected.borrow(), *total_doubtful.borrow(), *total_recovered.borrow(), *total_susceptible.borrow());
+            } else {
+                self.field.iter_objects(|_loc, node| {
+                    *total_nodes.borrow_mut() += 1;
+                    match node.status {
+                        Status::Exposed => *total_exposed.borrow_mut() += 1,
+                        Status::Infected => *total_infected.borrow_mut() += 1,
+                        Status::Doubtful => *total_doubtful.borrow_mut() += 1,
+                        Status::Recovered => *total_recovered.borrow_mut() += 1,
+                        Status::Susceptible => *total_susceptible.borrow_mut() += 1,
+                    }
+                });
+            }
+        }
+
+        plot!(
+            String::from("Nodes over time"),
+            String::from("Nodes"),
+            self.step as f64,
+            *total_nodes.borrow_mut() as f64
+        );
+
+        plot!(
+            String::from("Nodes over time"),
+            String::from("Susceptible"),
+            self.step as f64,
+            *total_susceptible.borrow_mut() as f64
+        );
+
+        plot!(
+            String::from("Nodes over time"),
+            String::from("Exposed"),
+            self.step as f64,
+            *total_exposed.borrow_mut() as f64
+        );
+
+        plot!(
+            String::from("Nodes over time"),
+            String::from("Infected"),
+            self.step as f64,
+            *total_infected.borrow_mut() as f64
+        );
+
+        plot!(
+            String::from("Nodes over time"),
+            String::from("Doubtful"),
+            self.step as f64,
+            *total_doubtful.borrow_mut() as f64
+        );
+
+        plot!(
+            String::from("Nodes over time"),
+            String::from("Recovered"),
+            self.step as f64,
+            *total_recovered.borrow_mut() as f64
+        );
     }
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
