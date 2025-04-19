@@ -4,7 +4,7 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use krabmaga::engine::state::State;
+use krabmaga::engine::{fields::network::EdgeOptions, state::State};
 use krabmaga::engine::{
     agent::Agent,
     fields::field_2d::Location2D,
@@ -14,7 +14,7 @@ use krabmaga::engine::{
 use krabmaga::rand;
 use krabmaga::rand::Rng;
 
-use crate::{model::state::FakeNewsState, ALPHA, BETA, DELTA, GAMMA, PARAM_A, PARAM_B, PARAM_C, PROB_REMOVE_CONNECTION, THETA};
+use crate::{model::state::FakeNewsState, ALPHA, BETA, DELTA, GAMMA, PARAM_A, PARAM_B, PARAM_C, PROB_ADD_CONNECTION, PROB_REMOVE_CONNECTION, THETA};
 
 use krabmaga::engine::fields::field::Field;
 
@@ -212,8 +212,62 @@ impl Node {
                 }
             }
         }
-        state.network.update();
     }
+
+    fn add_connections(&self, state: &mut FakeNewsState) {
+        let mut rng = rand::thread_rng();
+        let edges = state.network.get_edges(*self);
+        let neighbours = if let Some(edges) = edges {
+            let mut neighbours = Vec::new();
+
+            for edge in edges {
+                let neighbour_id = if edge.u == self.id {
+                    edge.v
+                } else {
+                    edge.u
+                };
+
+                neighbours.push(neighbour_id);
+            }
+
+            neighbours
+        } else {
+            Vec::new()
+        };
+
+        for neighbour_id in &neighbours {
+            if let Some(neighbour) = state.network.get_object(*neighbour_id) {
+                let neighbour_edges = state.network.get_edges(neighbour);
+                if let Some(neighbour_edges) = neighbour_edges {
+                    for neighbour_edge in neighbour_edges {
+                        let second_neighbor_id = if neighbour_edge.u == neighbour.id {
+                            neighbour_edge.v
+                        } else {
+                            neighbour_edge.u
+                        };
+    
+                        if neighbours.iter().any(|id| *id == second_neighbor_id) {
+                            continue;
+                        }
+
+                        if let Some(second_neighbor) = state.network.get_object(second_neighbor_id) {
+                            if self.id != second_neighbor.id
+                                && self.status == second_neighbor.status
+                                && rng.gen::<f32>() < PROB_ADD_CONNECTION {
+                                    state.network.add_edge(*self, second_neighbor, EdgeOptions::Simple);
+                            } 
+                        } else {
+                            panic!("Node {} not found in network", second_neighbor_id);
+                        }
+                    }
+                }
+            } else {
+                panic!("Node {} not found in network", neighbour_id);
+            }
+        }
+    }
+
+    
 }
 
 impl Agent for Node {
@@ -225,7 +279,9 @@ impl Agent for Node {
 
         self.transition_state(state);
         self.remove_connections(state);
+        self.add_connections(state);
 
+        state.network.update();
         state.network.update_node(*self);
         state.field.set_object_location(*self, self.loc);
     }

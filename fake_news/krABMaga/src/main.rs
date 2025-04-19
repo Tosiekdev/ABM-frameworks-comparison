@@ -12,7 +12,7 @@ use {
 
 mod model;
 
-const POPULATION_SIZE: u32 = 50;
+const POPULATION_SIZE: u32 = 100;
 const DISCRETIZATION: f32 = 10.0 / 1.5;
 const TOROIDAL: bool = false;
 
@@ -29,6 +29,7 @@ pub const PARAM_B: f32 = 0.1;
 pub const PARAM_C: f32 = 0.1;
 
 pub const PROB_REMOVE_CONNECTION: f32 = 0.03;
+pub const PROB_ADD_CONNECTION: f32 = 0.03;
 
 #[cfg(not(any(feature = "visualization", feature = "visualization_wasm")))]
 fn main() {

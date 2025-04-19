@@ -78,7 +78,7 @@ impl State for FakeNewsState {
         let total_susceptible = RefCell::new(0);
 
         cfg_if! {
-            if #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]{
+            if #[cfg(any(feature = "visualization", feature = "visualization_wasm"))] {
                 for node in self.network.nodes2id.borrow().keys() {
                     *total_nodes.borrow_mut() += 1;
                     match node.status {
