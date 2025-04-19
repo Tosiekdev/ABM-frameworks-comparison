@@ -14,7 +14,9 @@ use krabmaga::engine::{
 use krabmaga::rand;
 use krabmaga::rand::Rng;
 
-use crate::{model::state::FakeNewsState, ALPHA, BETA, DELTA, GAMMA, PARAM_A, PARAM_B, PARAM_C, THETA};
+use crate::{model::state::FakeNewsState, ALPHA, BETA, DELTA, GAMMA, PARAM_A, PARAM_B, PARAM_C, PROB_REMOVE_CONNECTION, THETA};
+
+use krabmaga::engine::fields::field::Field;
 
 use super::{
     age::{Age, AGE_DISTRIBUTION},
@@ -188,16 +190,49 @@ impl Node {
             Status::Recovered => {}
         }
     }
+
+    fn remove_connections(&self, state: &mut FakeNewsState) {
+        let mut rng = rand::thread_rng();
+        let edges = state.network.get_edges(*self);
+        if let Some(edges) = edges {
+            for edge in edges {
+                let neighbour_id = if edge.u == self.id {
+                    edge.v
+                } else {
+                    edge.u
+                };
+
+                if let Some(neighbour) = state.network.get_object(neighbour_id) {
+                    if self.status != neighbour.status
+                        && rng.gen::<f32>() < PROB_REMOVE_CONNECTION {
+                            let x = state.network.remove_edge(*self, neighbour);
+
+                            println!("Removed connection between {} and {}", self.id, neighbour_id);
+
+                            if let Some(_) = x {
+                                println!("Removed edge from network");
+                            } else {
+                                panic!("Edge not found in network");
+                            }
+                        } 
+                } else {
+                    panic!("Node {} not found in network", neighbour_id);
+                }
+            }
+        }
+        state.network.update();
+    }
 }
 
 impl Agent for Node {
     fn step(&mut self, state: &mut dyn State) {
         let state = state
-            .as_any()
-            .downcast_ref::<FakeNewsState>()
+            .as_any_mut()
+            .downcast_mut::<FakeNewsState>()
             .unwrap();
 
         self.transition_state(state);
+        self.remove_connections(state);
 
         state.network.update_node(*self);
         state.field.set_object_location(*self, self.loc);

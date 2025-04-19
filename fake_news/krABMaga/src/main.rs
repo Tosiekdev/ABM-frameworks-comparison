@@ -28,6 +28,8 @@ pub const PARAM_A: f32 = 0.1;
 pub const PARAM_B: f32 = 0.1;
 pub const PARAM_C: f32 = 0.1;
 
+pub const PROB_REMOVE_CONNECTION: f32 = 0.03;
+
 #[cfg(not(any(feature = "visualization", feature = "visualization_wasm")))]
 fn main() {
     let step: u64 = 110;
