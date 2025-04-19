@@ -14,9 +14,13 @@ use krabmaga::engine::{
 use krabmaga::rand;
 use krabmaga::rand::Rng;
 
-use crate::{model::state::FakeNewsState, ALPHA, BETA, DELTA, GAMMA, PARAM_A, PARAM_B, PARAM_C, PROB_ADD_CONNECTION, PROB_REMOVE_CONNECTION, THETA};
-
-use krabmaga::engine::fields::field::Field;
+use crate::{
+    model::state::FakeNewsState,
+    ALPHA, BETA, DELTA, GAMMA,
+     PARAM_A, PARAM_B, PARAM_C,
+     PROB_ADD_CONNECTION,
+     PROB_REMOVE_CONNECTION, THETA
+};
 
 use super::{
     age::{Age, AGE_DISTRIBUTION},
@@ -281,7 +285,6 @@ impl Agent for Node {
         self.remove_connections(state);
         self.add_connections(state);
 
-        state.network.update();
         state.network.update_node(*self);
         state.field.set_object_location(*self, self.loc);
     }
