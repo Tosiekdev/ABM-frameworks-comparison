@@ -65,6 +65,6 @@ page = SolaraViz(
         StatePlot,
     ],
     model_params=model_params,
-    name="Virus Model",
+    name="Fake news Model",
 )
 page
