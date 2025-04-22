@@ -292,6 +292,9 @@ float Agent::ItoR(FakeNewsModel& model) {
     const auto R = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
         return node->agent.state == State::R;
     }));
+    const auto S = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
+        return node->agent.state == State::S;
+    }));
 
     return age * model.a * rand<0.9f, 1.f>() + edu * model.b * rand<0.9f, 1.f>() + gender * model.c * rand<0.05f, 0.1f>() - E /
            N - I / N + D / N + R / N - S / N;
@@ -316,6 +319,9 @@ float Agent::DtoE(FakeNewsModel& model) {
     }));
     const auto R = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
         return node->agent.state == State::R;
+    }));
+    const auto S = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
+        return node->agent.state == State::S;
     }));
 
     return age * model.a * rand<0.9f, 1.f>() + edu * model.b * rand<0.9f, 1.f>() + gender * model.c * rand<0.05f, 0.1f>() + E /
