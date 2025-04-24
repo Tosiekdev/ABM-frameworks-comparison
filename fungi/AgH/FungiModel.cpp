@@ -76,7 +76,7 @@ void FungiModel::getStats() {
     const size_t exploration = getAgents<ExplorationCell>().size();
     const int totalAgentRes = std::accumulate(getAgents<CoreCell>().begin(), getAgents<CoreCell>().end(), 0,
                                               [](const int a, const CoreCell& c) { return a + c.resources; });
-    int totalGridRes = 0.f;
+    int totalGridRes = 0;
     for (int i = 0; i < resources.getHeight(); ++i) {
         for (int j = 0; j < resources.getWidth(); ++j) {
             totalGridRes += resources.get({j, i});
