@@ -1,0 +1,18 @@
+cmake_minimum_required(VERSION 3.30)
+project(AgH)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_FLAGS "-O3")
+
+include_directories(../../Agent-Harmony/include)
+
+add_executable(AgH main.cpp
+        FungiModel.cpp
+        FungiModel.hpp
+        CoreCell.cpp
+        CoreCell.hpp
+        ExplorationCell.cpp
+        ExplorationCell.hpp
+        Scheduler.hpp
+        Cell.cpp
+        Cell.hpp)
