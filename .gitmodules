@@ -1,0 +1,3 @@
+[submodule "Agent-Harmony"]
+	path = Agent-Harmony
+	url = https://github.com/Tosiekdev/Agent-Harmony

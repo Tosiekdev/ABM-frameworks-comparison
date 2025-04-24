@@ -1,0 +1,13 @@
+cmake_minimum_required(VERSION 3.31)
+project(AgH)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_FLAGS "-O3")
+
+include_directories(../../Agent-Harmony/include)
+
+add_executable(AgH main.cpp
+        FakeNewsModel.cpp
+        FakeNewsModel.hpp
+        Agent.cpp
+        Agent.hpp)
