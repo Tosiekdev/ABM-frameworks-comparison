@@ -25,7 +25,8 @@ namespace {
                 return points[i];
             }
         }
-        assert(false && "UNREACHABLE");
+
+        return points.back();
     }
 }
 
