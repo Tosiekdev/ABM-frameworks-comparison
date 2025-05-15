@@ -17,20 +17,21 @@ pub enum LifeState {
 
 #[derive(Copy, Clone)]
 pub struct Cell {
-    pub id: i32,
+    pub id: u32,
     pub loc: Real2D,
     pub state: LifeState,
 }
 
 impl Cell {
     pub fn new(
-        id: i32,
+        id: u32,
         loc: Real2D,
+        state: LifeState,
     ) -> Cell {
         Cell {
             id,
             loc,
-            state: LifeState::Alive,
+            state: state,
         }
     }
 
@@ -43,7 +44,15 @@ impl Cell {
         let live_neighbors = state
             .cell_grid
             .get_neighbors_within_relax_distance(self.loc, 1.0)
-            .len();
+            .iter()
+            .filter(|cell| cell.state == LifeState::Alive)
+            .count();
+
+        // println!(
+        //     "Cell {} at ({}, {}) has {} live neighbors",
+        //     self.id, self.loc.x, self.loc.y, live_neighbors
+        // );
+
         let next_state = match (self.state, live_neighbors) {
                     // Rule 1: Any live cell with fewer than two live neighbours
                     // dies, as if caused by underpopulation.
@@ -74,8 +83,8 @@ impl Agent for Cell {
     fn step(&mut self, state: &mut dyn State) {
         let state = state.as_any_mut().downcast_mut::<GameOfLifeState>().unwrap();
 
-        // state.cell_grid.set_object_location(self, &self.loc);
         self.next_cell_state(state);
+        state.cell_grid.set_object_location(*self, self.loc);
     }
 
     fn is_stopped(&mut self, _state: &mut dyn State) -> bool {
