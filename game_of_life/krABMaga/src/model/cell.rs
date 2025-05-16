@@ -48,11 +48,6 @@ impl Cell {
             .filter(|cell| cell.state == LifeState::Alive)
             .count();
 
-        // println!(
-        //     "Cell {} at ({}, {}) has {} live neighbors",
-        //     self.id, self.loc.x, self.loc.y, live_neighbors
-        // );
-
         let next_state = match (self.state, live_neighbors) {
                     // Rule 1: Any live cell with fewer than two live neighbours
                     // dies, as if caused by underpopulation.

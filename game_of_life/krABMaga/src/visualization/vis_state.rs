@@ -5,7 +5,7 @@ use krabmaga::engine::agent::Agent;
 use krabmaga::engine::location::Real2D;
 use krabmaga::engine::schedule::Schedule;
 use krabmaga::engine::state::State;
-use krabmaga::visualization::agent_render::{AgentRender, SpriteType};
+use krabmaga::visualization::agent_render::AgentRender;
 use krabmaga::visualization::asset_handle_factory::AssetHandleFactoryResource;
 use krabmaga::visualization::simulation_descriptor::SimulationDescriptor;
 use krabmaga::visualization::visualization_state::VisualizationState;
@@ -53,30 +53,6 @@ impl VisualizationState<GameOfLifeState> for VisState {
         }) {
             Some(matching_agent) => Some(Box::new(*matching_agent)),
             None => None,
-        }
-    }
-
-    fn before_render(
-        &mut self,
-        state: &mut GameOfLifeState,
-        _schedule: &Schedule,
-        commands: &mut Commands,
-        asset_factory: &mut AssetHandleFactoryResource,
-    ) {
-        for cell in &state.new_cells {
-            let boxed_agent = &cell.as_agent();
-            let boxed_state = Box::new(state.as_state());
-            let cell_vis = self.get_agent_render(boxed_agent, state);
-            let SpriteType::Emoji(emoji_code) =
-                cell_vis.unwrap().sprite(boxed_agent, &boxed_state);
-            let sprite_render = asset_factory.get_emoji_loader(emoji_code);
-            self.setup_agent_graphics(
-                boxed_agent,
-                self.get_agent_render(boxed_agent, state).unwrap(),
-                sprite_render,
-                commands,
-                &boxed_state,
-            );
         }
     }
 }

@@ -17,7 +17,6 @@ pub struct GameOfLifeState{
     pub next_id: u32,
     pub dim: (f32, f32),
     pub cell_grid: Field2D<Cell>,
-    pub new_cells: Vec<Cell>,
 }
 
 impl GameOfLifeState {
@@ -27,7 +26,6 @@ impl GameOfLifeState {
             next_id: 1,
             dim,
             cell_grid: Field2D::new(dim.0, dim.1, 1.0, true),
-            new_cells: Vec::new(),
         }
     }
 
