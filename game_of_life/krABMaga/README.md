@@ -8,5 +8,8 @@ When the visualization framework is enabled (either natively or compiled to WebA
 
 # How to run
 - To run only the simulation, run `cargo run --release`.
+
+> **Notice:** To use the visualization commands below, you need to have [`cargo-make`](https://github.com/sagiegurari/cargo-make) installed.
+
 - To run the native visualization, run `cargo make run --profile release`.
 - To serve the web visualization locally, run `cargo make serve --profile release`.
