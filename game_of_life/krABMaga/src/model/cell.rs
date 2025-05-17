@@ -31,7 +31,7 @@ impl Cell {
         Cell {
             id,
             loc,
-            state: state,
+            state,
         }
     }
 
