@@ -1,54 +1,35 @@
 #include "SimState.hpp"
 
-#include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <random>
-#include <thread>
 
-static std::random_device rd;
-static std::mt19937 g(rd());
-
-SimState::SimState(const int width, const int height, const int epochs, const int agentsCount)
+SimState::SimState(const int width, const int height, const int epochs, std::string_view file)
     : space(width, height, true), duration(epochs) {
-    std::vector<agh::Point> positions = space.getEmpty();
-    std::ranges::shuffle(positions, g);
-    positions.erase(positions.begin() + agentsCount, positions.end());
-
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            if (const agh::Point p{x, y}; std::ranges::find(positions, p) != positions.end()) {
-                space.addAgent(emplaceAgent<Agent>(true), p);
-            }
-            else {
-                space.addAgent(emplaceAgent<Agent>(false), p);
-            }
-        }
+    std::ifstream initState(file.data());
+    std::string line;
+    if (!initState.good()) {
+        throw std::runtime_error("Could not open file");
     }
-}
 
-void SimState::print() {
-    system("clear");
-    space.transform([&](const agh::Point p, const Agent& a) {
-        if (a.alive) {
-            std::cout << "\033[1;31m1\033[0m";;
-        }
-        else {
-            std::cout << "0";
-        }
+    int y = 0;
 
-        if (p.x == space.getWidth() - 1) {
-            std::cout << "\n";
+    while (std::getline(initState, line)) {
+        if (line.empty()) {
+            continue;
         }
-    });
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        for (int x = 0; x < line.size(); ++x) {
+            auto& agent = emplaceAgent<Agent>(line[x] == '1');
+            space.addAgent(agent, {x, y});
+        }
+        ++y;
+    }
 }
 
 void SimState::beforeStep() {}
 
-void SimState::afterStep() {
-    print();
-}
+void SimState::afterStep() {}
 
-bool SimState::shouldEnd(int epochs) {
+bool SimState::shouldEnd(const int epochs) {
     return epochs >= duration;
 }
