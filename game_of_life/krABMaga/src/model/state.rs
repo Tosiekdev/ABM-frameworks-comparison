@@ -10,6 +10,9 @@ use krabmaga::engine::{
     schedule::Schedule, state::State
 };
 
+#[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
+use std::time::Instant;
+
 use super::cell::{Cell, LifeState};
 
 pub struct GameOfLifeState{
@@ -18,11 +21,31 @@ pub struct GameOfLifeState{
     pub dim: (i32, i32),
     pub cell_grid: DenseGrid2D<Cell>,
     pub initial_state_path: String,
-
     pub read: usize,
+
+    
+    #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
+    start_time: Option<Instant>,
+    #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
+    end_step: u64,
 }
 
 impl GameOfLifeState {
+    #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
+    pub fn new(dim: (i32, i32), initial_state_path: &str, end_step: u64) -> GameOfLifeState {
+        GameOfLifeState {
+            step: 0,
+            next_id: 1,
+            dim,
+            cell_grid: DenseGrid2D::new(dim.0, dim.1),
+            initial_state_path: initial_state_path.to_string(),
+            read: 0,
+            start_time: None,
+            end_step,
+        }
+    }
+
+    #[cfg(not(any(feature = "visualization", feature = "visualization_wasm")))]
     pub fn new(dim: (i32, i32), initial_state_path: &str) -> GameOfLifeState {
         GameOfLifeState {
             step: 0,
@@ -51,8 +74,25 @@ impl State for GameOfLifeState {
     fn update(&mut self, step: u64) {
         self.step = step;
 
+        #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
+        if self.step == 0 {
+            self.start_time = Some(Instant::now());
+        }
+
         self.cell_grid.lazy_update();
         self.read = 1 - self.read;
+
+        #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
+        if self.step == self.end_step {
+            if let Some(start_time) = self.start_time {
+                println!(
+                    "Took {} ms",
+                    Instant::now()
+                        .duration_since(start_time)
+                        .as_millis()
+                );
+            }
+        }
     }
 
     fn reset(&mut self) {

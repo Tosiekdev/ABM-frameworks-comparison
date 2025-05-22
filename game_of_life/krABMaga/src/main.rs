@@ -15,11 +15,11 @@ use crate::model::state::GameOfLifeState;
 
 mod model;
 
-fn parse_args() -> ((i32, i32), u64, String) {
+fn parse_args() -> ((i32, i32), u64, String, bool) {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 4 {
-        eprintln!("Usage: {} <width,height> <step> <initial_state_path>", args[0]);
+        eprintln!("Usage: {} <width,height> <step> <initial_state_path> [--no-terminal]", args[0]);
         std::process::exit(1);
     }
 
@@ -31,7 +31,7 @@ fn parse_args() -> ((i32, i32), u64, String) {
     let dimension: Vec<i32> = args.get(start)
         .expect("Please provide dimensions after '--'")
         .split(',')
-        .map(|s| s.trim().parse().expect("Please provide valid floats for dimensions"))
+        .map(|s| s.trim().parse().expect("Please provide valid integers for dimensions"))
         .collect();
     let dimension = (dimension[0], dimension[1]);
     let step: u64 = args.get(start + 1)
@@ -41,17 +41,21 @@ fn parse_args() -> ((i32, i32), u64, String) {
     let initial_state_path = args.get(start + 2)
         .expect("Please provide initial state path after step")
         .clone();
-    (dimension, step, initial_state_path)
+
+    // Check for the optional --no-terminal flag
+    let no_terminal = args.iter().any(|arg| arg == "--no-terminal");
+
+    (dimension, step, initial_state_path, no_terminal)
 }
 
 // Main used when only the simulation should run, without any visualization.
 #[cfg(not(any(feature = "visualization", feature = "visualization_wasm")))]
 fn main() {
-    let (dimension, step, initial_state_path) = parse_args();
+    let (dimension, step, initial_state_path, no_terminal) = parse_args();
 
     let state = GameOfLifeState::new(dimension, &initial_state_path);
 
-    simulate!(state, step, 10, true);
+    simulate!(state, step, 1, !no_terminal);
 }
 
 #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
@@ -60,9 +64,9 @@ mod visualization;
 // Main used when a visualization feature is applied.
 #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
 fn main() {
-    let (dimension, _step, initial_state_path) = parse_args();
+    let (dimension, step, initial_state_path, _no_terminal) = parse_args();
 
-    let state = GameOfLifeState::new(dimension, &initial_state_path);
+    let state = GameOfLifeState::new(dimension, &initial_state_path, step);
     Visualization::default()
         .with_window_dimensions(800., 800.)
         .with_simulation_dimensions(dimension.0 as f32, dimension.1 as f32)
