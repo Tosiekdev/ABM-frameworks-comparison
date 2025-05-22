@@ -24,7 +24,7 @@ fn parse_args() -> ((i32, i32), u64, String, bool) {
     }
 
     // Find the position of "--" in the arguments
-    let start = args.iter().position(|arg| arg == "--")
+    let start = args.iter().position(|arg| arg == "release")
         .map(|pos| pos + 1)
         .unwrap_or(1); // Default to 1 if "--" not found
 
