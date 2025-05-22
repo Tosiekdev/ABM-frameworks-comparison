@@ -13,14 +13,15 @@ use crate::model::state::GameOfLifeState;
 
 mod model;
 
+pub const DIMENSION: (f32, f32) = (10., 10.);
+pub const INITIAL_STATE_PATH: &str = "../test_scenarios/10.txt";
+
 // Main used when only the simulation should run, without any visualization.
 #[cfg(not(any(feature = "visualization", feature = "visualization_wasm")))]
 fn main() {
     let step = 1000;
 
-    let dim: (f32, f32) = (100., 100.);
-
-    let state = GameOfLifeState::new(dim);
+    let state = GameOfLifeState::new(DIMENSION);
 
     simulate!(state, step, 10, true);
 }
@@ -31,12 +32,10 @@ mod visualization;
 // Main used when a visualization feature is applied.
 #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
 fn main() {
-    let dim: (f32, f32) = (100., 100.);
-
-    let state = GameOfLifeState::new(dim);
+    let state = GameOfLifeState::new(DIMENSION);
     Visualization::default()
         .with_window_dimensions(800., 800.)
-        .with_simulation_dimensions(dim.0, dim.1)
+        .with_simulation_dimensions(DIMENSION.0, DIMENSION.1)
         .with_background_color(Color::WHITE)
         .with_name("Game of Life")
         .start::<VisState, GameOfLifeState>(VisState, state);

@@ -1,4 +1,4 @@
-use core::{fmt};
+use core::fmt;
 use std::hash::{Hash, Hasher};
 
 use krabmaga::engine::fields::field_2d::Location2D;
@@ -45,7 +45,7 @@ impl Cell {
             .cell_grid
             .get_neighbors_within_relax_distance(self.loc, 1.0)
             .iter()
-            .filter(|cell| cell.state == LifeState::Alive)
+            .filter(|cell| cell.state == LifeState::Alive && cell.id != self.id)
             .count();
 
         let next_state = match (self.state, live_neighbors) {
