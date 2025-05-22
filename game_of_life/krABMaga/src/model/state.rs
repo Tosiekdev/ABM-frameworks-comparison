@@ -1,31 +1,59 @@
 use std::any::Any;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 
+use krabmaga::engine::fields::dense_object_grid_2d::DenseGrid2D;
 use krabmaga::engine::fields::field::Field;
-use krabmaga::engine::fields::field_2d::Field2D;
 
-use krabmaga::engine::location::Real2D;
+use krabmaga::engine::location::Int2D;
 use krabmaga::engine::{
     schedule::Schedule, state::State
 };
-use krabmaga::rand;
-use krabmaga::rand::Rng;
+
+#[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
+use std::time::Instant;
 
 use super::cell::{Cell, LifeState};
 
 pub struct GameOfLifeState{
     pub step: u64,
     pub next_id: u32,
-    pub dim: (f32, f32),
-    pub cell_grid: Field2D<Cell>,
+    pub dim: (i32, i32),
+    pub cell_grid: DenseGrid2D<Cell>,
+    pub initial_state_path: String,
+    pub read: usize,
+
+    
+    #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
+    start_time: Option<Instant>,
+    #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
+    end_step: u64,
 }
 
 impl GameOfLifeState {
-    pub fn new(dim: (f32, f32)) -> GameOfLifeState {
+    #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
+    pub fn new(dim: (i32, i32), initial_state_path: &str, end_step: u64) -> GameOfLifeState {
         GameOfLifeState {
             step: 0,
             next_id: 1,
             dim,
-            cell_grid: Field2D::new(dim.0, dim.1, 1.0, true),
+            cell_grid: DenseGrid2D::new(dim.0, dim.1),
+            initial_state_path: initial_state_path.to_string(),
+            read: 0,
+            start_time: None,
+            end_step,
+        }
+    }
+
+    #[cfg(not(any(feature = "visualization", feature = "visualization_wasm")))]
+    pub fn new(dim: (i32, i32), initial_state_path: &str) -> GameOfLifeState {
+        GameOfLifeState {
+            step: 0,
+            next_id: 1,
+            dim,
+            cell_grid: DenseGrid2D::new(dim.0, dim.1),
+            initial_state_path: initial_state_path.to_string(),
+            read: 0,
         }
     }
 
@@ -46,12 +74,31 @@ impl State for GameOfLifeState {
     fn update(&mut self, step: u64) {
         self.step = step;
 
+        #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
+        if self.step == 0 {
+            self.start_time = Some(Instant::now());
+        }
+
         self.cell_grid.lazy_update();
+        self.read = 1 - self.read;
+
+        #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
+        if self.step == self.end_step {
+            if let Some(start_time) = self.start_time {
+                println!(
+                    "Took {} ms",
+                    Instant::now()
+                        .duration_since(start_time)
+                        .as_millis()
+                );
+            }
+        }
     }
 
     fn reset(&mut self) {
         self.step = 0;
-        self.cell_grid = Field2D::new(self.dim.0, self.dim.1, 1.0, true);
+        self.read = 0;
+        self.cell_grid = DenseGrid2D::new(self.dim.0, self.dim.1);
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
@@ -72,29 +119,56 @@ impl State for GameOfLifeState {
 }
 
 fn generate_cells(state: &mut GameOfLifeState, schedule: &mut Schedule) {
-    let mut rng = rand::thread_rng();
+    let file = match File::open(&state.initial_state_path) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("Failed to open initial state file: {}", e);
+            return;
+        }
+    };
+    let mut reader = BufReader::new(file);
+    let mut line = String::new();
+    let mut y = 0;
 
-    for x in 0..state.dim.0 as i32 {
-        for y in 0..state.dim.1 as i32 {
-            let loc = Real2D {
-                x: x as f32,
-                y: y as f32,
-            };
-    
-            let is_alive = rng.gen_bool(0.5);
+    loop {
+        match reader.read_line(&mut line) {
+            Ok(0) => break, // EOF
+            Ok(_) => {
+                for (x, ch) in line.trim_end().chars().enumerate() {
+                    let loc = Int2D {
+                        x: x as i32,
+                        y: state.dim.1 - 1 - y as i32,
+                    };
 
-            let cell = Cell::new(
-                state.get_next_id(),
-                loc,
-                if is_alive {
-                    LifeState::Alive
-                } else {
-                    LifeState::Dead
-                },
-            );
-            state.cell_grid.set_object_location(cell, loc);
-    
-            schedule.schedule_repeating(Box::new(cell), 0., 0);
+                    let is_alive = match ch {
+                        '1' => true,
+                        '0' => false,
+                        _ => {
+                            eprintln!("Invalid character in initial state file: {}", ch);
+                            continue;
+                        }
+                    };
+
+                    let cell = Cell::new(
+                        state.get_next_id(),
+                        loc,
+                        if is_alive {
+                            LifeState::Alive
+                        } else {
+                            LifeState::Dead
+                        },
+                    );
+                    state.cell_grid.set_object_location(cell, &loc);
+                    schedule.schedule_repeating(Box::new(cell), 0., 0);
+                }
+
+                y += 1;
+                line.clear();
+            }
+            Err(e) => {
+                eprintln!("Error reading line: {}", e);
+                break;
+            }
         }
     }
 }

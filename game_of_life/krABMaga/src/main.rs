@@ -1,3 +1,5 @@
+use std::env;
+
 #[cfg(not(any(feature = "visualization", feature = "visualization_wasm")))]
 use krabmaga::*;
 
@@ -13,16 +15,47 @@ use crate::model::state::GameOfLifeState;
 
 mod model;
 
+fn parse_args() -> ((i32, i32), u64, String, bool) {
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() < 4 {
+        eprintln!("Usage: {} <width,height> <step> <initial_state_path> [--no-terminal]", args[0]);
+        std::process::exit(1);
+    }
+
+    // Find the position of "--" in the arguments
+    let start = args.iter().position(|arg| arg == "release")
+        .map(|pos| pos + 1)
+        .unwrap_or(1); // Default to 1 if "--" not found
+
+    let dimension: Vec<i32> = args.get(start)
+        .expect("Please provide dimensions after '--'")
+        .split(',')
+        .map(|s| s.trim().parse().expect("Please provide valid integers for dimensions"))
+        .collect();
+    let dimension = (dimension[0], dimension[1]);
+    let step: u64 = args.get(start + 1)
+        .expect("Please provide step after dimensions")
+        .parse()
+        .expect("Please provide a valid integer for step");
+    let initial_state_path = args.get(start + 2)
+        .expect("Please provide initial state path after step")
+        .clone();
+
+    // Check for the optional --no-terminal flag
+    let no_terminal = args.iter().any(|arg| arg == "--no-terminal");
+
+    (dimension, step, initial_state_path, no_terminal)
+}
+
 // Main used when only the simulation should run, without any visualization.
 #[cfg(not(any(feature = "visualization", feature = "visualization_wasm")))]
 fn main() {
-    let step = 1000;
+    let (dimension, step, initial_state_path, no_terminal) = parse_args();
 
-    let dim: (f32, f32) = (100., 100.);
+    let state = GameOfLifeState::new(dimension, &initial_state_path);
 
-    let state = GameOfLifeState::new(dim);
-
-    simulate!(state, step, 10, true);
+    simulate!(state, step, 1, !no_terminal);
 }
 
 #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
@@ -31,12 +64,12 @@ mod visualization;
 // Main used when a visualization feature is applied.
 #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
 fn main() {
-    let dim: (f32, f32) = (100., 100.);
+    let (dimension, step, initial_state_path, _no_terminal) = parse_args();
 
-    let state = GameOfLifeState::new(dim);
+    let state = GameOfLifeState::new(dimension, &initial_state_path, step);
     Visualization::default()
         .with_window_dimensions(800., 800.)
-        .with_simulation_dimensions(dim.0, dim.1)
+        .with_simulation_dimensions(dimension.0 as f32, dimension.1 as f32)
         .with_background_color(Color::WHITE)
         .with_name("Game of Life")
         .start::<VisState, GameOfLifeState>(VisState, state);
