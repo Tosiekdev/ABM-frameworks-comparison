@@ -1,8 +1,8 @@
 use core::fmt;
 use std::hash::{Hash, Hasher};
 
-use krabmaga::engine::fields::field_2d::Location2D;
-use krabmaga::engine::location::Real2D;
+// use krabmaga::engine::fields::field_2d::Location2D;
+use krabmaga::engine::location::Int2D;
 use krabmaga::engine::{
     agent::Agent, state::State
 };
@@ -18,14 +18,14 @@ pub enum LifeState {
 #[derive(Copy, Clone)]
 pub struct Cell {
     pub id: u32,
-    pub loc: Real2D,
+    pub loc: Int2D,
     pub state: LifeState,
 }
 
 impl Cell {
     pub fn new(
         id: u32,
-        loc: Real2D,
+        loc: Int2D,
         state: LifeState,
     ) -> Cell {
         Cell {
@@ -40,11 +40,46 @@ impl Cell {
         Box::new(self)
     }
 
+    fn get_toroidal_neighbors<'a>(self: &'a Self, state: &'a GameOfLifeState) -> impl Iterator<Item = Cell> + 'a {
+        const DIRECTIONS: [(i32, i32); 8] = [
+            (-1, -1), (0, -1), (-1, 0),
+            (-1, 1),           (0, 1),
+            (1, 1),   (1, 0),  (1, -1),
+        ];
+
+        let dim_x: i32 = state.dim.0;
+        let dim_y: i32 = state.dim.1;
+        let x: i32 = self.loc.x;
+        let y: i32 = self.loc.y;
+
+        #[cfg(not(any(feature = "visualization", feature = "visualization_wasm")))]
+        let rlocs = state.cell_grid.locs[state.read].borrow();
+
+        DIRECTIONS.into_iter().filter_map(move |(dx, dy)| {
+            let nx: i32 = (x + dx + dim_x) % dim_x;
+            let ny: i32 = (y + dy + dim_y) % dim_y;
+
+            #[cfg(not(any(feature = "visualization", feature = "visualization_wasm")))] {
+                let index = (nx * dim_y + ny) as usize;
+                let cell_list = &rlocs[index];
+                if cell_list.is_empty() {
+                    None
+                } else {
+                    Some(cell_list[0])
+                }
+            }
+            
+            #[cfg(any(feature = "visualization", feature = "visualization_wasm"))] {
+                let loc: Int2D = Int2D { x: nx, y: ny };
+                let vec: &Vec<Cell> = state.cell_grid.loc2objs.get_read(&loc)?;
+                return if vec.is_empty() { None } else { Some(vec[0]) };
+            }
+        })
+    }
+    
     fn next_cell_state(&mut self, state: &GameOfLifeState) {
-        let live_neighbors = state
-            .cell_grid
-            .get_neighbors_within_relax_distance(self.loc, 1.0)
-            .iter()
+        let live_neighbors = self
+            .get_toroidal_neighbors(state)
             .filter(|cell| cell.state == LifeState::Alive && cell.id != self.id)
             .count();
 
@@ -79,7 +114,7 @@ impl Agent for Cell {
         let state = state.as_any_mut().downcast_mut::<GameOfLifeState>().unwrap();
 
         self.next_cell_state(state);
-        state.cell_grid.set_object_location(*self, self.loc);
+        state.cell_grid.set_object_location(*self, &self.loc);
     }
 
     fn is_stopped(&mut self, _state: &mut dyn State) -> bool {
@@ -107,15 +142,5 @@ impl Hash for Cell {
 impl fmt::Display for Cell {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.id)
-    }
-}
-
-impl Location2D<Real2D> for Cell {
-    fn get_location(self) -> Real2D {
-        self.loc
-    }
-
-    fn set_location(&mut self, loc: Real2D) {
-        self.loc = loc;
     }
 }

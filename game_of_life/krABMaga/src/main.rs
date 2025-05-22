@@ -15,7 +15,7 @@ use crate::model::state::GameOfLifeState;
 
 mod model;
 
-fn parse_args() -> ((f32, f32), u64, String) {
+fn parse_args() -> ((i32, i32), u64, String) {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 4 {
@@ -28,7 +28,7 @@ fn parse_args() -> ((f32, f32), u64, String) {
         .map(|pos| pos + 1)
         .unwrap_or(1); // Default to 1 if "--" not found
 
-    let dimension: Vec<f32> = args.get(start)
+    let dimension: Vec<i32> = args.get(start)
         .expect("Please provide dimensions after '--'")
         .split(',')
         .map(|s| s.trim().parse().expect("Please provide valid floats for dimensions"))
@@ -65,7 +65,7 @@ fn main() {
     let state = GameOfLifeState::new(dimension, &initial_state_path);
     Visualization::default()
         .with_window_dimensions(800., 800.)
-        .with_simulation_dimensions(dimension.0, dimension.1)
+        .with_simulation_dimensions(dimension.0 as f32, dimension.1 as f32)
         .with_background_color(Color::WHITE)
         .with_name("Game of Life")
         .start::<VisState, GameOfLifeState>(VisState, state);

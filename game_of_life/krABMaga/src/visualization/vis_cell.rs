@@ -23,8 +23,8 @@ impl AgentRender for VisCell {
     fn location(&self, agent: &Box<dyn Agent>, _state: &Box<&dyn State>) -> (f32, f32, f32) {
         let agent = agent.downcast_ref::<Cell>().unwrap();
         (
-            agent.loc.x,
-            agent.loc.y,
+            agent.loc.x as f32,
+            agent.loc.y as f32,
             1.
         )
     }

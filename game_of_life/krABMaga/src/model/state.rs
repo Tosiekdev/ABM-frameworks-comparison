@@ -2,10 +2,10 @@ use std::any::Any;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
+use krabmaga::engine::fields::dense_object_grid_2d::DenseGrid2D;
 use krabmaga::engine::fields::field::Field;
-use krabmaga::engine::fields::field_2d::Field2D;
 
-use krabmaga::engine::location::Real2D;
+use krabmaga::engine::location::Int2D;
 use krabmaga::engine::{
     schedule::Schedule, state::State
 };
@@ -15,19 +15,22 @@ use super::cell::{Cell, LifeState};
 pub struct GameOfLifeState{
     pub step: u64,
     pub next_id: u32,
-    pub dim: (f32, f32),
-    pub cell_grid: Field2D<Cell>,
+    pub dim: (i32, i32),
+    pub cell_grid: DenseGrid2D<Cell>,
     pub initial_state_path: String,
+
+    pub read: usize,
 }
 
 impl GameOfLifeState {
-    pub fn new(dim: (f32, f32), initial_state_path: &str) -> GameOfLifeState {
+    pub fn new(dim: (i32, i32), initial_state_path: &str) -> GameOfLifeState {
         GameOfLifeState {
             step: 0,
             next_id: 1,
             dim,
-            cell_grid: Field2D::new(dim.0, dim.1, 1.0, true),
+            cell_grid: DenseGrid2D::new(dim.0, dim.1),
             initial_state_path: initial_state_path.to_string(),
+            read: 0,
         }
     }
 
@@ -49,11 +52,13 @@ impl State for GameOfLifeState {
         self.step = step;
 
         self.cell_grid.lazy_update();
+        self.read = 1 - self.read;
     }
 
     fn reset(&mut self) {
         self.step = 0;
-        self.cell_grid = Field2D::new(self.dim.0, self.dim.1, 1.0, true);
+        self.read = 0;
+        self.cell_grid = DenseGrid2D::new(self.dim.0, self.dim.1);
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
@@ -90,9 +95,9 @@ fn generate_cells(state: &mut GameOfLifeState, schedule: &mut Schedule) {
             Ok(0) => break, // EOF
             Ok(_) => {
                 for (x, ch) in line.trim_end().chars().enumerate() {
-                    let loc = Real2D {
-                        x: x as f32,
-                        y: state.dim.1 - 1. - y as f32,
+                    let loc = Int2D {
+                        x: x as i32,
+                        y: state.dim.1 - 1 - y as i32,
                     };
 
                     let is_alive = match ch {
@@ -113,8 +118,7 @@ fn generate_cells(state: &mut GameOfLifeState, schedule: &mut Schedule) {
                             LifeState::Dead
                         },
                     );
-                    state.cell_grid.set_object_location(cell, loc);
-            
+                    state.cell_grid.set_object_location(cell, &loc);
                     schedule.schedule_repeating(Box::new(cell), 0., 0);
                 }
 
