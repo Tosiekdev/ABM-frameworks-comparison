@@ -38,11 +38,12 @@ command = "cargo"
 
 [tasks.run]
 command = "${CARGO_TARGET_DIR}/${ENV_DIR}/${CARGO_MAKE_BINARY_EXECUTABLE_NAME}"
+args = ["${@}"]
 dependencies = ["build-native"]
 
 [tasks.serve]
 command = "basic-http-server"
-args = ["-x"]
+args = ["-x", "${@}"]
 dependencies = ["build-web", "basic-http-server"]
 
 [tasks.test]

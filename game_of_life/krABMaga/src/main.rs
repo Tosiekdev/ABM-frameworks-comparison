@@ -1,3 +1,5 @@
+use std::env;
+
 #[cfg(not(any(feature = "visualization", feature = "visualization_wasm")))]
 use krabmaga::*;
 
@@ -13,15 +15,41 @@ use crate::model::state::GameOfLifeState;
 
 mod model;
 
-pub const DIMENSION: (f32, f32) = (10., 10.);
-pub const INITIAL_STATE_PATH: &str = "../test_scenarios/10.txt";
+fn parse_args() -> ((f32, f32), u64, String) {
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() < 4 {
+        eprintln!("Usage: {} <width,height> <step> <initial_state_path>", args[0]);
+        std::process::exit(1);
+    }
+
+    // Find the position of "--" in the arguments
+    let start = args.iter().position(|arg| arg == "--")
+        .map(|pos| pos + 1)
+        .unwrap_or(1); // Default to 1 if "--" not found
+
+    let dimension: Vec<f32> = args.get(start)
+        .expect("Please provide dimensions after '--'")
+        .split(',')
+        .map(|s| s.trim().parse().expect("Please provide valid floats for dimensions"))
+        .collect();
+    let dimension = (dimension[0], dimension[1]);
+    let step: u64 = args.get(start + 1)
+        .expect("Please provide step after dimensions")
+        .parse()
+        .expect("Please provide a valid integer for step");
+    let initial_state_path = args.get(start + 2)
+        .expect("Please provide initial state path after step")
+        .clone();
+    (dimension, step, initial_state_path)
+}
 
 // Main used when only the simulation should run, without any visualization.
 #[cfg(not(any(feature = "visualization", feature = "visualization_wasm")))]
 fn main() {
-    let step = 1000;
+    let (dimension, step, initial_state_path) = parse_args();
 
-    let state = GameOfLifeState::new(DIMENSION);
+    let state = GameOfLifeState::new(dimension, &initial_state_path);
 
     simulate!(state, step, 10, true);
 }
@@ -32,10 +60,12 @@ mod visualization;
 // Main used when a visualization feature is applied.
 #[cfg(any(feature = "visualization", feature = "visualization_wasm"))]
 fn main() {
-    let state = GameOfLifeState::new(DIMENSION);
+    let (dimension, _step, initial_state_path) = parse_args();
+
+    let state = GameOfLifeState::new(dimension, &initial_state_path);
     Visualization::default()
         .with_window_dimensions(800., 800.)
-        .with_simulation_dimensions(DIMENSION.0, DIMENSION.1)
+        .with_simulation_dimensions(dimension.0, dimension.1)
         .with_background_color(Color::WHITE)
         .with_name("Game of Life")
         .start::<VisState, GameOfLifeState>(VisState, state);

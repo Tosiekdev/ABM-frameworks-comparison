@@ -10,8 +10,6 @@ use krabmaga::engine::{
     schedule::Schedule, state::State
 };
 
-use crate::INITIAL_STATE_PATH;
-
 use super::cell::{Cell, LifeState};
 
 pub struct GameOfLifeState{
@@ -19,15 +17,17 @@ pub struct GameOfLifeState{
     pub next_id: u32,
     pub dim: (f32, f32),
     pub cell_grid: Field2D<Cell>,
+    pub initial_state_path: String,
 }
 
 impl GameOfLifeState {
-    pub fn new(dim: (f32, f32)) -> GameOfLifeState {
+    pub fn new(dim: (f32, f32), initial_state_path: &str) -> GameOfLifeState {
         GameOfLifeState {
             step: 0,
             next_id: 1,
             dim,
             cell_grid: Field2D::new(dim.0, dim.1, 1.0, true),
+            initial_state_path: initial_state_path.to_string(),
         }
     }
 
@@ -74,7 +74,7 @@ impl State for GameOfLifeState {
 }
 
 fn generate_cells(state: &mut GameOfLifeState, schedule: &mut Schedule) {
-    let file = match File::open(INITIAL_STATE_PATH) {
+    let file = match File::open(&state.initial_state_path) {
         Ok(f) => f,
         Err(e) => {
             eprintln!("Failed to open initial state file: {}", e);
