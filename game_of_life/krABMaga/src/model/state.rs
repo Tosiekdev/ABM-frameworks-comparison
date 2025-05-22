@@ -1,4 +1,6 @@
 use std::any::Any;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 
 use krabmaga::engine::fields::field::Field;
 use krabmaga::engine::fields::field_2d::Field2D;
@@ -7,8 +9,8 @@ use krabmaga::engine::location::Real2D;
 use krabmaga::engine::{
     schedule::Schedule, state::State
 };
-use krabmaga::rand;
-use krabmaga::rand::Rng;
+
+use crate::INITIAL_STATE_PATH;
 
 use super::cell::{Cell, LifeState};
 
@@ -72,29 +74,57 @@ impl State for GameOfLifeState {
 }
 
 fn generate_cells(state: &mut GameOfLifeState, schedule: &mut Schedule) {
-    let mut rng = rand::thread_rng();
+    let file = match File::open(INITIAL_STATE_PATH) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("Failed to open initial state file: {}", e);
+            return;
+        }
+    };
+    let mut reader = BufReader::new(file);
+    let mut line = String::new();
+    let mut y = 0;
 
-    for x in 0..state.dim.0 as i32 {
-        for y in 0..state.dim.1 as i32 {
-            let loc = Real2D {
-                x: x as f32,
-                y: y as f32,
-            };
-    
-            let is_alive = rng.gen_bool(0.5);
+    loop {
+        match reader.read_line(&mut line) {
+            Ok(0) => break, // EOF
+            Ok(_) => {
+                for (x, ch) in line.trim_end().chars().enumerate() {
+                    let loc = Real2D {
+                        x: x as f32,
+                        y: state.dim.1 - 1. - y as f32,
+                    };
 
-            let cell = Cell::new(
-                state.get_next_id(),
-                loc,
-                if is_alive {
-                    LifeState::Alive
-                } else {
-                    LifeState::Dead
-                },
-            );
-            state.cell_grid.set_object_location(cell, loc);
-    
-            schedule.schedule_repeating(Box::new(cell), 0., 0);
+                    let is_alive = match ch {
+                        '1' => true,
+                        '0' => false,
+                        _ => {
+                            eprintln!("Invalid character in initial state file: {}", ch);
+                            continue;
+                        }
+                    };
+
+                    let cell = Cell::new(
+                        state.get_next_id(),
+                        loc,
+                        if is_alive {
+                            LifeState::Alive
+                        } else {
+                            LifeState::Dead
+                        },
+                    );
+                    state.cell_grid.set_object_location(cell, loc);
+            
+                    schedule.schedule_repeating(Box::new(cell), 0., 0);
+                }
+
+                y += 1;
+                line.clear();
+            }
+            Err(e) => {
+                eprintln!("Error reading line: {}", e);
+                break;
+            }
         }
     }
 }
