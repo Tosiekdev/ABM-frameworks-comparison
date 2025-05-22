@@ -1,4 +1,3 @@
-import time
 from random import Random
 import numpy as np
 from mesa import Model
@@ -10,7 +9,6 @@ class ConwaysGameOfLife(Model):
     """Represents the 2-dimensional array of cells in Conway's Game of Life."""
 
     def __init__(self, scenario, steps, width, height, seed=42):
-        start_time = time.time()
         """Create a new playing area based on a scenario file."""
         super().__init__(seed=seed)
         lines = []
@@ -39,10 +37,6 @@ class ConwaysGameOfLife(Model):
         self.running = True
         for step in range(steps):
             self.step()
-
-        end_time = time.time()
-        print(f'total time: {end_time - start_time}')
-        self.print_state()
 
     def step(self):
         """Perform the model step in two stages:
