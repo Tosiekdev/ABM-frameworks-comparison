@@ -5,7 +5,7 @@
 #include <random>
 
 SimState::SimState(const int width, const int height, const int epochs, std::string_view file)
-    : space(width, height), duration(epochs) {
+    : space(width, height, true), duration(epochs) {
     std::ifstream initState(file.data());
     std::string line;
     if (!initState.good()) {
