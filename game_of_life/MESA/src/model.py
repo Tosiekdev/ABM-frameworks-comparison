@@ -17,7 +17,7 @@ class ConwaysGameOfLife(Model):
         with open(scenario, 'r') as f:
             line = f.readline()
             while line:
-                lines.append(list(line))
+                lines.append(list(line.strip()))
                 line = f.readline()
 
         scenario = np.array(lines)

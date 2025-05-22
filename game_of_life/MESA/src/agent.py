@@ -33,7 +33,7 @@ class AgentLife(FixedAgent):
     def determine_state(self):
         """Compute if the cell will be dead or alive at the next tick.  This is
         based on the number of alive or dead neighbors.  The state is not
-        changed here, but is just computed and stored in self._nextState,
+        changed here, but is just computed and stored in self._next_state,
         because our current state may still be necessary for our neighbors
         to calculate their next state.
         """
