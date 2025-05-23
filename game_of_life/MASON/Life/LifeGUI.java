@@ -13,7 +13,7 @@ public class LifeGUI extends GUIState
 
     public LifeGUI() { super(new LifeModel(System.currentTimeMillis())); }
 
-    public LifeGUI(String[] args) { super(new LifeModel(System.currentTimeMillis(), args)); }
+    public LifeGUI(String[] args) { super(new LifeModel(System.currentTimeMillis(), args));}
 
     public LifeGUI(SimState state) { super(state); }
 
@@ -49,13 +49,13 @@ public class LifeGUI extends GUIState
         displayFrame.setVisible(true);
 
 
-        display.attach(gridPortrayal,"Life");
+        display.attach(gridPortrayal,"Game of Life");
         display.setBackdrop(Color.black);
     }
 
     public static void main(String[] args)
     {
-        LifeGUI tutorial2 = new LifeGUI();
+        LifeGUI tutorial2 = new LifeGUI(args);
         Console c = new Console(tutorial2);
         c.setVisible(true);
     }

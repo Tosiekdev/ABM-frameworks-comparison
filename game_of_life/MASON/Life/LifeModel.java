@@ -10,49 +10,8 @@ import java.util.*;
 
 public class LifeModel extends SimState
 {
-    public LifeModel(long seed, String[] args) {super(seed);}
-    public LifeModel(long seed)
-    {
+    public LifeModel(long seed, String[] args) {
         super(seed);
-    }
-    public IntGrid2D grid;
-
-    public static int gridWidth ;
-    public static int gridHeight;
-    Random rand = new Random();
-    boolean state;
-    List<LifeAgent> agents = new ArrayList<>();
-    static int[][] inputMatrix;
-
-
-    void fillGrid()
-    {
-
-        for(int i=0;i< gridWidth;i++)
-            for(int j=0;j<gridHeight;j++){
-                state = (inputMatrix[i][j] == 1);
-                LifeAgent agent = new LifeAgent(i,j,state);
-                agents.add(agent);
-                grid.set(i, j, (state ? 1 : 0));
-                schedule.scheduleRepeating(agent,1,1);
-            }
-        schedule.scheduleRepeating(new Swapper(), 10, 1);
-
-    }
-
-    public void start()
-    {
-        super.start();
-
-        //IMPORTANT!!!
-        schedule.setShuffling(false);
-
-        grid = new IntGrid2D(gridWidth, gridHeight);
-        fillGrid();
-    }
-
-    public static void main(String[] args)
-    {
         //CHOOSE INPUT FILE
         String filePath = null;
         List<String> remainingArgsList = new ArrayList<>();
@@ -64,7 +23,8 @@ public class LifeModel extends SimState
                 remainingArgsList.add(args[i]);
             }
         }
-        String[] remainingArgs = remainingArgsList.toArray(new String[0]);
+        remainingArgs = remainingArgsList.toArray(new String[0]);
+
 
         //READ INPUT FILE
         List<int[]> rows = new ArrayList<>();
@@ -94,12 +54,55 @@ public class LifeModel extends SimState
             for (int[] row : inputMatrix) {
                 System.out.println(Arrays.toString(row));
             }
+            System.out.println("FILE: " + filePath);
 
+            //IMPORTANT!!!
+            schedule.setShuffling(false);
+            grid = new IntGrid2D(gridWidth, gridHeight);
+            fillGrid();
         } catch (IOException e) {
             System.err.println("Error reading file: " + e.getMessage());
-            return;
         }
+    }
+    public LifeModel(long seed)
+    {
+        super(seed);
+    }
+    public IntGrid2D grid;
 
+    public static int gridWidth ;
+    public static int gridHeight;
+    private static String[] remainingArgs;
+    Random rand = new Random();
+    boolean state;
+    List<LifeAgent> agents = new ArrayList<>();
+    static int[][] inputMatrix;
+
+
+    void fillGrid()
+    {
+
+        for(int i=0;i< gridWidth;i++)
+            for(int j=0;j<gridHeight;j++){
+                state = (inputMatrix[i][j] == 1);
+                LifeAgent agent = new LifeAgent(i,j,state);
+                agents.add(agent);
+                grid.set(i, j, (state ? 1 : 0));
+                schedule.scheduleRepeating(agent,1,1);
+            }
+        schedule.scheduleRepeating(new Swapper(), 10, 1);
+
+    }
+
+    public void start()
+    {
+        super.start();
+        schedule.setShuffling(false);
+        fillGrid();
+    }
+
+    public static void main(String[] args)
+    {
         //START SIMULATION
         doLoop(LifeModel.class, remainingArgs);
         System.exit(0);

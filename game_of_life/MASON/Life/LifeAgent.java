@@ -31,7 +31,7 @@ public class LifeAgent implements Steppable
     {
         LifeModel model = (LifeModel)state;
         //COUNT ALIVE NEIGHBOURS
-        IntBag neighbors = model.grid.getMooreNeighbors(this.x,this.y, 1, ObjectGrid2D.TOROIDAL,false);
+        IntBag neighbors = model.grid.getMooreNeighbors(this.x,this.y, 1, ObjectGrid2D.BOUNDED,false);
         int aliveNeighbors = 0;
         for (int i = 0; i < neighbors.size(); i++) {
             aliveNeighbors += neighbors.get(i);
