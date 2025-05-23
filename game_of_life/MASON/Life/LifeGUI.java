@@ -9,8 +9,11 @@ public class LifeGUI extends GUIState
 {
     public Display2D display;
     public JFrame displayFrame;
+    String[] modelArgs;
 
     public LifeGUI() { super(new LifeModel(System.currentTimeMillis())); }
+
+    public LifeGUI(String[] args) { super(new LifeModel(System.currentTimeMillis(), args)); }
 
     public LifeGUI(SimState state) { super(state); }
 
