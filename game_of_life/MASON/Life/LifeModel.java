@@ -98,6 +98,8 @@ public class LifeModel extends SimState
     {
         super.start();
         schedule.setShuffling(false);
+        agents.clear(); // Clear the agents list to avoid duplicate scheduling
+        grid = new IntGrid2D(gridWidth, gridHeight); // Reset the grid state
         fillGrid();
     }
 
