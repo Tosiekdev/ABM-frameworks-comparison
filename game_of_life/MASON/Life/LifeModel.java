@@ -50,11 +50,6 @@ public class LifeModel extends SimState
             // Convert List<int[]> to int[][]
             inputMatrix = rows.toArray(new int[0][]);
 
-            // Print to check
-            for (int[] row : inputMatrix) {
-                System.out.println(Arrays.toString(row));
-            }
-            System.out.println("FILE: " + filePath);
 
             //IMPORTANT!!!
             schedule.setShuffling(false);
