@@ -77,12 +77,12 @@ public class LifeModel extends SimState
     void fillGrid()
     {
 
-        for(int i=0;i< gridWidth;i++)
-            for(int j=0;j<gridHeight;j++){
+        for(int i=0;i< gridHeight;i++)
+            for(int j=0;j<gridWidth;j++){
                 state = (inputMatrix[i][j] == 1);
                 LifeAgent agent = new LifeAgent(i,j,state);
                 agents.add(agent);
-                grid.set(i, j, (state ? 1 : 0));
+                grid.set(j, i, (state ? 1 : 0));
                 schedule.scheduleRepeating(agent,1,1);
             }
         schedule.scheduleRepeating(new Swapper(), 10, 1);
