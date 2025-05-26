@@ -10,9 +10,8 @@ import java.util.*;
 
 public class LifeModel extends SimState
 {
-    public LifeModel(long seed, String[] args) {
-        super(seed);
-        //CHOOSE INPUT FILE
+
+    public static void readFile(String[] args) {
         String filePath = null;
         List<String> remainingArgsList = new ArrayList<>();
 
@@ -50,19 +49,22 @@ public class LifeModel extends SimState
             // Convert List<int[]> to int[][]
             inputMatrix = rows.toArray(new int[0][]);
 
-
-            //IMPORTANT!!!
-            schedule.setShuffling(false);
             grid = new IntGrid2D(gridWidth, gridHeight);
         } catch (IOException e) {
             System.err.println("Error reading file: " + e.getMessage());
         }
     }
+
+    public LifeModel(long seed, String[] args) {
+        super(seed);
+        //CHOOSE INPUT FILE
+        readFile(args);
+    }
     public LifeModel(long seed)
     {
         super(seed);
     }
-    public IntGrid2D grid;
+    public static IntGrid2D grid;
 
     public static int gridWidth ;
     public static int gridHeight;
@@ -99,6 +101,7 @@ public class LifeModel extends SimState
 
     public static void main(String[] args)
     {
+        readFile(args);
         //START SIMULATION
         doLoop(LifeModel.class, remainingArgs);
         System.exit(0);

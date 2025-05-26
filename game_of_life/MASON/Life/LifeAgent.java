@@ -38,6 +38,6 @@ public class LifeAgent implements Steppable
         }
 
         //CALCULATE NEXT STATE
-        this.nextState = this.alive ? (aliveNeighbors === 2 || aliveNeighbors === 3) : aliveNeighbors === 3;
+        this.nextState = this.alive ? (aliveNeighbors == 2 || aliveNeighbors == 3) : aliveNeighbors == 3;
     }
 }
