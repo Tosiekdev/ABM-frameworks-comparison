@@ -54,7 +54,6 @@ public class LifeModel extends SimState
             //IMPORTANT!!!
             schedule.setShuffling(false);
             grid = new IntGrid2D(gridWidth, gridHeight);
-            fillGrid();
         } catch (IOException e) {
             System.err.println("Error reading file: " + e.getMessage());
         }
