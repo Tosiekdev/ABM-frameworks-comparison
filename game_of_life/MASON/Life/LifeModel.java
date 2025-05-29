@@ -10,6 +10,13 @@ import java.util.*;
 
 public class LifeModel extends SimState
 {
+    public static IntGrid2D grid;
+    public static int gridWidth, gridHeight;
+    private static String[] remainingArgs;
+    Random rand = new Random();
+    boolean state;
+    List<LifeAgent> agents = new ArrayList<>();
+    static int[][] inputMatrix;
 
     public static void readFile(String[] args) {
         String filePath = null;
@@ -64,16 +71,6 @@ public class LifeModel extends SimState
     {
         super(seed);
     }
-    public static IntGrid2D grid;
-
-    public static int gridWidth ;
-    public static int gridHeight;
-    private static String[] remainingArgs;
-    Random rand = new Random();
-    boolean state;
-    List<LifeAgent> agents = new ArrayList<>();
-    static int[][] inputMatrix;
-
 
     void fillGrid()
     {
