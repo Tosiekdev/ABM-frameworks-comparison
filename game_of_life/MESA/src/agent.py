@@ -1,4 +1,4 @@
-from mesa.discrete_space import FixedAgent, Cell
+from mesa.discrete_space import FixedAgent
 
 
 class AgentLife(FixedAgent):

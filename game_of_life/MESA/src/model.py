@@ -35,6 +35,7 @@ class ConwaysGameOfLife(Model):
             )
 
         self.running = True
+        
         for step in range(steps):
             self.step()
 
