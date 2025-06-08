@@ -3,5 +3,6 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$/../../.." vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../../../Agent-Harmony" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../../../Agent-Harmony/SFML" vcs="Git" />
   </component>
 </project>
