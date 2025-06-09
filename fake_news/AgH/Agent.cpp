@@ -197,135 +197,65 @@ void Agent::step(FakeNewsModel& model) {
     addConnections(model);
 }
 
-float Agent::StoE(FakeNewsModel& model) {
+float Agent::computeBase(const FakeNewsModel& model) const {
     const float age = maps::age[state][ageGroup];
     const float edu = maps::education[state][education];
     const float gender = maps::sex[state][sex];
 
-    const std::vector<AgentNode *> nghs = model.network.getNeighborhood(*this);
+    return age * model.a * rand<0.9f, 1.f>() + edu * model.b * rand<0.9f, 1.f>() + gender * model.c * rand<0.05f,
+               0.1f>();
+}
+
+Agent::Nghs Agent::getNghsCounts(FakeNewsModel& model) {
+    using NodeIter = agh::Network<AgentNode, char>::NodeIter;
+
+    const std::vector<NodeIter> nghs = model.network.getNeighborhood(*this);
 
     const auto N = static_cast<float>(nghs.size());
-    const auto E = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
+    const auto E = static_cast<float>(std::ranges::count_if(nghs, [](const NodeIter node) {
         return node->agent.state == State::E;
     }));
-    const auto I = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
+    const auto I = static_cast<float>(std::ranges::count_if(nghs, [](const NodeIter node) {
         return node->agent.state == State::I;
     }));
-    const auto D = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
+    const auto D = static_cast<float>(std::ranges::count_if(nghs, [](const NodeIter node) {
         return node->agent.state == State::D;
     }));
-    const auto R = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
+    const auto R = static_cast<float>(std::ranges::count_if(nghs, [](const NodeIter node) {
         return node->agent.state == State::R;
     }));
 
-    return age * model.a * rand<0.9f, 1.f>() + edu * model.b * rand<0.9f, 1.f>() + gender * model.c * rand<0.05f, 0.1f>() + E /
-           N + I / N - D / N - R / N;
+    return {N, E, I, D, R};
+}
+
+float Agent::StoE(FakeNewsModel& model) {
+    const auto [N, E, I, D, R] = getNghsCounts(model);
+
+    return computeBase(model) + E / N + I / N - D / N - R / N;
 }
 
 float Agent::EtoI(FakeNewsModel& model) {
-    const float age = maps::age[state][ageGroup];
-    const float edu = maps::education[state][education];
-    const float gender = maps::sex[state][sex];
+    const auto [N, E, I, D, R] = getNghsCounts(model);
 
-    const std::vector<AgentNode *> nghs = model.network.getNeighborhood(*this);
-
-    const auto N = static_cast<float>(nghs.size());
-    const auto E = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::E;
-    }));
-    const auto I = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::I;
-    }));
-    const auto D = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::D;
-    }));
-    const auto R = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::R;
-    }));
-
-    return age * model.a * rand<0.9f, 1.f>() + edu * model.b * rand<0.9f, 1.f>() + gender * model.c * rand<0.05f, 0.1f>() + E /
-           N + I / N - D / N - R / N;
+    return computeBase(model) + E / N + I / N - D / N - R / N;
 }
 
 float Agent::EtoD(FakeNewsModel& model) {
-    const float age = maps::age[state][ageGroup];
-    const float edu = maps::education[state][education];
-    const float gender = maps::sex[state][sex];
+    const auto [N, E, I, D, R] = getNghsCounts(model);
 
-    const std::vector<AgentNode *> nghs = model.network.getNeighborhood(*this);
-
-    const auto N = static_cast<float>(nghs.size());
-    const auto E = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::E;
-    }));
-    const auto I = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::I;
-    }));
-    const auto D = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::D;
-    }));
-    const auto R = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::R;
-    }));
-
-    return age * model.a * rand<0.9f, 1.f>() + edu * model.b * rand<0.9f, 1.f>() + gender * model.c * rand<0.05f, 0.1f>() - E /
-           N - I / N + D / N + R / N;
+    return computeBase(model) - E / N - I / N + D / N + R / N;
 }
 
 float Agent::ItoR(FakeNewsModel& model) {
-    const float age = maps::age[state][ageGroup];
-    const float edu = maps::education[state][education];
-    const float gender = maps::sex[state][sex];
+    const auto [N, E, I, D, R] = getNghsCounts(model);
 
-    const std::vector<AgentNode *> nghs = model.network.getNeighborhood(*this);
-
-    const auto N = static_cast<float>(nghs.size());
-    const auto E = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::E;
-    }));
-    const auto I = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::I;
-    }));
-    const auto D = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::D;
-    }));
-    const auto R = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::R;
-    }));
-    const auto S = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::S;
-    }));
-
-    return age * model.a * rand<0.9f, 1.f>() + edu * model.b * rand<0.9f, 1.f>() + gender * model.c * rand<0.05f, 0.1f>() - E /
-           N - I / N + D / N + R / N - S / N;
+    return computeBase(model) - E / N - I / N + D / N + R / N - S / N;
 }
 
 float Agent::DtoE(FakeNewsModel& model) {
-    const float age = maps::age[state][ageGroup];
-    const float edu = maps::education[state][education];
-    const float gender = maps::sex[state][sex];
+    const auto [N, E, I, D, R] = getNghsCounts(model);
 
-    const std::vector<AgentNode *> nghs = model.network.getNeighborhood(*this);
-
-    const auto N = static_cast<float>(nghs.size());
-    const auto E = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::E;
-    }));
-    const auto I = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::I;
-    }));
-    const auto D = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::D;
-    }));
-    const auto R = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::R;
-    }));
-    const auto S = static_cast<float>(std::ranges::count_if(nghs, [](const AgentNode* node) {
-        return node->agent.state == State::S;
-    }));
-
-    return age * model.a * rand<0.9f, 1.f>() + edu * model.b * rand<0.9f, 1.f>() + gender * model.c * rand<0.05f, 0.1f>() + E /
-           N + I / N - D / N - R / N + S / N;
+    return computeBase(model) + E / N + I / N - D / N - R / N + S / N;
 }
 
 void Agent::trimConnections(FakeNewsModel& model) {
