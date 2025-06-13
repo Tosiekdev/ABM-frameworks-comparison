@@ -5,8 +5,6 @@
 struct FakeNewsModel;
 
 struct Agent {
-    using AgentIter =
-
     enum State {
         S, E, I, D, R
     };
