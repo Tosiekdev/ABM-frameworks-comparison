@@ -193,8 +193,7 @@ void Agent::step(FakeNewsModel& model) {
             ;
     }
 
-    trimConnections(model);
-    addConnections(model);
+    move(model);
 }
 
 float Agent::computeBase(const FakeNewsModel& model) const {
@@ -207,22 +206,22 @@ float Agent::computeBase(const FakeNewsModel& model) const {
 }
 
 Agent::Nghs Agent::getNghsCounts(FakeNewsModel& model) {
-    using NodeIter = agh::Network<AgentNode, char>::NodeIter;
+    using AgentVariant = agh::ContinuousSpace<Agent>::AgentT;
 
-    const std::vector<NodeIter> nghs = model.network.getNeighborhood(*this);
+    const std::vector<AgentVariant> nghs = model.space.getNeighbors(*pos, FakeNewsModel::NN_DISTANCE, true, true);
 
     const auto N = static_cast<float>(nghs.size());
-    const auto E = static_cast<float>(std::ranges::count_if(nghs, [](const NodeIter node) {
-        return node->agent.state == State::E;
+    const auto E = static_cast<float>(std::ranges::count_if(nghs, [](const AgentVariant& agent) {
+        return std::get<Agent*>(agent)->state == State::E;
     }));
-    const auto I = static_cast<float>(std::ranges::count_if(nghs, [](const NodeIter node) {
-        return node->agent.state == State::I;
+    const auto I = static_cast<float>(std::ranges::count_if(nghs, [](const AgentVariant& agent) {
+        return std::get<Agent*>(agent)->state == State::I;
     }));
-    const auto D = static_cast<float>(std::ranges::count_if(nghs, [](const NodeIter node) {
-        return node->agent.state == State::D;
+    const auto D = static_cast<float>(std::ranges::count_if(nghs, [](const AgentVariant& agent) {
+        return std::get<Agent*>(agent)->state == State::D;
     }));
-    const auto R = static_cast<float>(std::ranges::count_if(nghs, [](const NodeIter node) {
-        return node->agent.state == State::R;
+    const auto R = static_cast<float>(std::ranges::count_if(nghs, [](const AgentVariant& agent) {
+        return std::get<Agent*>(agent)->state == State::R;
     }));
 
     return {N, E, I, D, R};
@@ -258,22 +257,44 @@ float Agent::DtoE(FakeNewsModel& model) {
     return computeBase(model) + E / N + I / N - D / N - R / N + S / N;
 }
 
-void Agent::trimConnections(FakeNewsModel& model) {
-    const auto nghs = model.network.getNeighborhood(*this);
-    for (const auto ngh: nghs) {
-        if (rand<0.f, 1.f>() < probOfTrim && ngh->agent.state != state) {
-            model.network.removeEdge(*this, *ngh);
-        }
+void Agent::move(FakeNewsModel& model) {
+    using AgentVariant = agh::ContinuousSpace<Agent>::AgentT;
+
+    const std::vector<AgentVariant> nghs = model.space.getNeighbors(*pos, FakeNewsModel::MN_DISTANCE, true, true);
+
+    if (nghs.empty()) {
+        return;
     }
-}
 
-void Agent::addConnections(FakeNewsModel& model) {
-    const auto nghs = model.network.getNeighborhood(*this, 2);
-
-    for (const auto ngh: nghs) {
-        if (rand<0.f, 1.f>() < probOfConnect && ngh->agent.state == state) {
-            model.network.addEdge(*this, *ngh);
+    float nSame{};
+    float sumX{};
+    float sumY{};
+    std::ranges::for_each(nghs, [&](const AgentVariant& agent) {
+        const auto a = std::get<Agent*>(agent);
+        if (a->state == state) {
+            sumX += a->pos->x;
+            sumY += a->pos->y;
+            ++nSame;
         }
+    });
+
+    if (nSame == 0.f) {
+        return;
+    }
+
+    const float newX = sumX / nSame;
+    const float newY = sumY / nSame;
+
+    float dx = newX - pos->x;
+    float dy = newY - pos->y;
+    const float dist = std::hypot(dx, dy);
+
+    if (dist > 0.f) {
+        const float step = dist > MAX_MOVE ? MAX_MOVE : dist;
+        const float ratio = step / dist;
+        dx *= ratio;
+        dy *= ratio;
+        model.space.moveAgent(*this, {pos->x + dx, pos->y + dy});
     }
 }
 

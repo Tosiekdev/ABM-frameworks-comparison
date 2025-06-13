@@ -4,21 +4,26 @@
 #include <random>
 
 #include "Agent.hpp"
-#include "Agent.hpp"
 
 namespace {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
     template<int From, int To>
     int rand() {
-        static std::random_device rd;
-        static std::mt19937 gen(rd());
         static std::uniform_int_distribution<> dist(From, To);
+        return dist(gen);
+    }
+
+    float randReal() {
+        static std::uniform_real_distribution<float> dist(0, 1);
         return dist(gen);
     }
 }
 
-FakeNewsModel::FakeNewsModel(const int size, const float paramA, const float paramB,
-                             const float paramC,
-                             const int maxEpochs) : a(paramA), b(paramB), c(paramC), max(maxEpochs) {
+FakeNewsModel::FakeNewsModel(const float size, const float dx, const int nAgents, const float paramA,
+                             const float paramB, const float paramC, const int maxEpochs) : space(size, size, dx),
+    a(paramA), b(paramB), c(paramC), max(maxEpochs) {
     static constexpr std::array states = {
         Agent::State::S, Agent::State::E, Agent::State::I, Agent::State::D, Agent::State::R
     };
@@ -38,19 +43,15 @@ FakeNewsModel::FakeNewsModel(const int size, const float paramA, const float par
         Agent::AgeGroup::From80toXX,
     };
 
-    for (size_t i = 0; i < size; ++i) {
+    for (size_t i = 0; i < nAgents; ++i) {
         emplaceAgent<Agent>(states[rand<0, states.size() - 1>()], eds[rand<0, eds.size() - 1>()],
                             sexes[rand<0, sexes.size() - 1>()], ages[rand<0, ages.size() - 1>()]);
     }
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<size_t> dist(0, getAgents<Agent>().size()-1);
-
-    for (auto& i: getAgents<Agent>()) {
-        for (size_t j = 0; j < getAgents<Agent>().size() / 10; ++j) {
-            network.addEdge(i, getAgents<Agent>()[dist(gen)]);
-        }
+    for (auto& agent: getAgents<Agent>()) {
+        const float x = randReal() * size;
+        const float y = randReal() * size;
+        space.addAgent(agent, {x, y});
     }
 }
 
