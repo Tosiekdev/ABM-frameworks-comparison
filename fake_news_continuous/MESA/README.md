@@ -4,14 +4,14 @@ This project simulates the spread of fake news in a population using an agent-ba
 
 ## 🧠 Overview
 
-Agents exist in a social network where they can be in one of five states:
+Agents exist in a continuous space where they can be in one of five states:
 - **S** (Susceptible)
 - **E** (Exposed)
 - **I** (Infected - believing and spreading misinformation)
 - **D** (Doubtful - skeptical)
 - **R** (Recovered - resistant to misinformation)
 
-They transition between states based on demographic factors and their local network environment. Agents also rewire connections to favor similar-minded individuals.
+They transition between states based on demographic factors and their local network environment. Agents also move in the dircetion of the similar-minded individuals.
 
 ## 🛠️ Requirements
 - Python 3.10+
