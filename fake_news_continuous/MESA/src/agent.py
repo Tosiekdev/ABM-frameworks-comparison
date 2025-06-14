@@ -1,39 +1,34 @@
 import random
 
-import networkx as nx
-
 from .distributions import (State,
-                            AgeGroup,
-                            EducationGroup,
-                            SexGroup,
                             EducationDistribution,
-                            SexDistribution,
+                            SexDistribution,    
                             PlatformAgeDistribution)
-from mesa.discrete_space import FixedAgent
+from mesa.experimental.continuous_space import ContinuousSpaceAgent
+import numpy as np
 
 
-class FakeNewsAgent(FixedAgent):
+class FakeNewsAgent(ContinuousSpaceAgent):
+    NN_DISCTANCE = 20
+    MN_DISTANCE = 10
+    MAX_MOVE = 2
+
     """Individual Agent definition and its properties/interaction methods."""
-    def __init__(
-            self,
-            model,
-            state,
-            cell,
-    ):
-        super().__init__(model)
+    def __init__(self, space, model, state, position):
+        super().__init__(space, model)
         self.state = state
         self.next_state = state
-        self.cell = cell
         self.age = self.weighted_choice(PlatformAgeDistribution[state])
         self.education = self.weighted_choice(EducationDistribution[state])
         self.sex = self.weighted_choice(SexDistribution[state])
+        self.position = position
 
     def weighted_choice(self, distribution):
         options, weights = zip(*distribution.items())
         return random.choices(options, weights=weights, k=1)[0]
 
     def compute_transition_score(self, transition):
-        neighbors = list(self.cell.neighborhood.agents)
+        neighbors = self.get_neighbors_in_radius(self.NN_DISCTANCE)[0]
         N = len(neighbors) or 1
 
         counts = {
@@ -104,29 +99,27 @@ class FakeNewsAgent(FixedAgent):
             if score > thresholds[(State.DOUBTFUL, State.EXPOSED)]:
                 self.next_state = State.EXPOSED
 
-    def rewire(self, remove_prob=0.2, add_prob=0.2):
-        G = self.model.grid
+    def move(self):
+        nghs = self.get_neighbors_in_radius(self.MN_DISTANCE)[0]
 
-        # Don't rewire if this node isn't in the graph
-        if self.unique_id not in G:
+        if len(nghs) == 0:
             return
+        
+        filtered_nghs = list(filter(lambda x : x.state == self.state, nghs))
+        if len(filtered_nghs) == 0:
+            return
+        
+        new_pos = np.sum(np.array([ngh.position for ngh in filtered_nghs]), axis=0) / len(filtered_nghs)
+        dx = new_pos[0] - self.position[0]
+        dy = new_pos[1] - self.position[1]
+        dist = np.sqrt(dx**2 + dy**2)
+        if dist > 0:
+            step = self.MAX_MOVE if dist > self.MAX_MOVE else dist
+            ratio = step / dist
+            dx *= ratio
+            dy *= ratio
+            self.position = self.position + np.array([dx, dy])
 
-        nearby = nx.single_source_shortest_path_length(G, self.unique_id, cutoff=2)
-
-        for nid, dist in nearby.items():
-            if nid == self.unique_id:
-                continue
-            if nid not in self.model.agents:
-                continue  # just in case
-            neighbor = self.model.agents[nid]
-            same_state = neighbor.state == self.state
-            connected = G.has_edge(self.unique_id, nid)
-
-            if not same_state and connected and self.random.random() < remove_prob:
-                G.remove_edge(self.unique_id, nid)
-
-            elif same_state and not connected and self.random.random() < add_prob:
-                G.add_edge(self.unique_id, nid)
 
     def advance(self):
         self.state = self.next_state

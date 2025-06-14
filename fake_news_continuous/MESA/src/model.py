@@ -1,12 +1,13 @@
-import networkx as nx
 from mesa import Model, DataCollector
-from mesa.discrete_space import Network
+from mesa.experimental.continuous_space import ContinuousSpace
 from .distributions import State
 from .agent import FakeNewsAgent
+from random import random
+import numpy as np
 
 
 def number_state(model, state):
-    return sum(1 for a in model.grid.all_cells.agents if a.state is state)
+    return sum(1 for a in model.agents if a.state == state)
 
 
 class FakeNewsModel(Model):
@@ -14,14 +15,12 @@ class FakeNewsModel(Model):
 
     def __init__(
             self,
-            num_nodes=100,
-            avg_node_degree=3,
-            seed=None,
+            size=100,
+            n_agents=1000,
+            seed=None
     ):
         super().__init__(seed=seed)
-        prob = avg_node_degree / num_nodes
-        graph = nx.erdos_renyi_graph(n=num_nodes, p=prob)
-        self.grid = Network(graph, capacity=1, random=self.random)
+        self.grid = ContinuousSpace([[0, size],[0, size]])
 
         self.datacollector = DataCollector(
             model_reporters={
@@ -34,18 +33,15 @@ class FakeNewsModel(Model):
             agent_reporters={"State": "state"}
         )
 
-        FakeNewsAgent.create_agents(
-            self,
-            num_nodes,
-            State.SUSCEPTIBLE,
-            list(self.grid.all_cells),
-        )
-
+        for _ in range(n_agents):
+            x = random() * size
+            y = random() * size
+            FakeNewsAgent(self.grid, self, State.SUSCEPTIBLE, np.array([x, y]))
         self.running = True
         self.datacollector.collect(self)
 
     def step(self):
         self.agents.shuffle_do("step")
         self.agents.shuffle_do("advance")
-        self.agents.shuffle_do("rewire")
+        self.agents.shuffle_do("move")
         self.datacollector.collect(self)
