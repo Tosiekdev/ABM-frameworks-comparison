@@ -11,7 +11,7 @@ Agents exist in a continuous space where they can be in one of five states:
 - **D** (Doubtful - skeptical)
 - **R** (Recovered - resistant to misinformation)
 
-They transition between states based on demographic factors and their local network environment. Agents also move in the dircetion of the similar-minded individuals.
+They transition between states based on demographic factors and their local network environment. Agents also move in the direction of the similar-minded individuals.
 
 ## 🛠️ Requirements
 - Python 3.10+
