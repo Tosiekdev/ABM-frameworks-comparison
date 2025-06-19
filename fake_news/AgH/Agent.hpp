@@ -40,6 +40,18 @@ struct Agent {
     static int idCounter;
 
 private:
+    struct Nghs {
+        float N;
+        float E;
+        float I;
+        float D;
+        float R;
+    };
+
+    float computeBase(const FakeNewsModel& model) const;
+
+    Nghs getNghsCounts(FakeNewsModel& model);
+
     float StoE(FakeNewsModel& model);
 
     float EtoI(FakeNewsModel& model);
