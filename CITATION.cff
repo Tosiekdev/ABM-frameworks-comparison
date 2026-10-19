@@ -1,0 +1,63 @@
+cff-version: 1.2.0
+message: >-
+  If you use these benchmark implementations in your research, please cite
+  the published paper listed in preferred-citation.
+type: software
+title: ABM Frameworks Comparison
+abstract: >-
+  Benchmark simulation implementations for a comparative study of the
+  capabilities, execution time, and operating memory usage of krABMaga,
+  Mesa, MASON, Agents.jl, and Agent Harmony.
+authors:
+  - family-names: Zięciak
+    given-names: Antoni
+  - family-names: Badeja
+    given-names: Ewelina
+  - family-names: Wójcicka
+    given-names: Joanna
+  - family-names: Szczygieł
+    given-names: Michał
+  - family-names: Orlikowski
+    given-names: Przemysław
+  - family-names: Wąs
+    given-names: Jarosław
+repository-code: https://github.com/Tosiekdev/ABM-frameworks-comparison
+url: https://github.com/Tosiekdev/ABM-frameworks-comparison
+license: MIT
+preferred-citation:
+  type: conference-paper
+  title: >-
+    Framework Showdown: A Practical Benchmarking Study of Agent-Based Modeling Platforms
+  authors:
+    - family-names: Zięciak
+      given-names: Antoni
+    - family-names: Badeja
+      given-names: Ewelina
+    - family-names: Wójcicka
+      given-names: Joanna
+    - family-names: Szczygieł
+      given-names: Michał
+    - family-names: Orlikowski
+      given-names: Przemysław
+    - family-names: Wąs
+      given-names: Jarosław
+  editors:
+    - family-names: Mason
+      given-names: Karl
+    - family-names: Haider
+      given-names: Usman
+    - family-names: Cruz Victorio
+      given-names: Marcos Eduardo
+  collection-title: Intelligent Agents in Science and Engineering
+  volume: 2976
+  start: 31
+  end: 47
+  year: 2026
+  month: 7
+  date-published: "2026-07-02"
+  publisher:
+    name: Springer
+    city: Cham
+  notes: IASE 2025. Communications in Computer and Information Science.
+  doi: 10.1007/978-3-032-28263-7_3
+  url: https://doi.org/10.1007/978-3-032-28263-7_3
